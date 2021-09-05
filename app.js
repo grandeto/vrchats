@@ -41,6 +41,12 @@ io.on("connection", socket => {
     console.log("io con received", socket.handshake)
     console.log('test', socket.handshake.auth.token == ioToken)
     console.log('ioToken', ioToken)
+    if (socket.handshake.auth.token != ioToken) {
+        console.log('token error')
+        socket.disconnect()
+    } else {
+        console.log('connected', socket.handshake.headers.origin + ':' + socket.handshake.address)
+    }
 })
 
 httpsServer.listen(3000, () => {
