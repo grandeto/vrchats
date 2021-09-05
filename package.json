@@ -1,0 +1,27 @@
+{
+  "name": "vrchats",
+  "version": "1.0.0",
+  "description": "Event driven real-time chat based on Socket.io",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/grandeto/vrchats.git"
+  },
+  "author": "grandeto",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.17.1",
+    "socket.io": "^4.2.0"
+  },
+  "optionalDependencies": {
+    "bufferutil": "^4.0.3",
+    "utf-8-validate": "^5.0.5"
+  },
+  "bugs": {
+    "url": "https://github.com/grandeto/vrchats/issues"
+  },
+  "homepage": "https://github.com/grandeto/vrchats#readme"
+}
