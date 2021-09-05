@@ -81,7 +81,7 @@ if (nextMidnight.getUTCHours() === 0) {
 }
 
 function ioTokenHash(date) {
-    return SHA512(process.env.SECRET + date)
+    return SHA512(process.env.SECRET + date).toString()
 }
 
 function yearMonthDay() {
