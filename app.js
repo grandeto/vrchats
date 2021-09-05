@@ -41,11 +41,21 @@ io.on("connection", socket => {
     console.log("io con received", socket.handshake)
     console.log('test', socket.handshake.auth.token == ioToken)
     console.log('ioToken', ioToken)
+    // if (socket.handshake.auth.token != ioToken) {
+    //     console.log('token error')
+    //     socket.disconnect()
+    // } else {
+    //     console.log('connected', socket.handshake.headers.origin + ':' + socket.handshake.address)
+    // }
+})
+
+io.use((socket, next) => {
     if (socket.handshake.auth.token != ioToken) {
         console.log('token error')
-        socket.disconnect()
+        next(new Error("invalid credentials"))
     } else {
         console.log('connected', socket.handshake.headers.origin + ':' + socket.handshake.address)
+        next()
     }
 })
 
