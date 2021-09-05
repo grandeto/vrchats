@@ -39,6 +39,7 @@ app.post('/', (req, res) => {
 
 io.on("connection", socket => {
     console.log("io con received", socket.handshake)
+    console.log('test', socket.handshake.auth.token == ioToken)
     console.log('ioToken', ioToken)
 })
 
@@ -86,5 +87,5 @@ function ioTokenHash(date) {
 
 function yearMonthDay() {
     let date = new Date()
-    return date.getUTCFullYear() + '-' + date.getUTCMonth()+1  + '-' + date.getUTCDate()
+    return date.getUTCFullYear() + '-' + (date.getUTCMonth()+1)  + '-' + date.getUTCDate()
 }
