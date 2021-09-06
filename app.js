@@ -16,9 +16,11 @@ const ioOptions = {
         methods: ["GET", "POST"]
       }
 }
-var ioToken = ioTokenHash(yearMonthDay())
-const hours24 = 1000 * 24 * 60 * 60;
 const io = require('socket.io')(httpsServer, ioOptions)
+const ioTokenRenewInterval = isNaN(+process.env.IO_TOKEN_RENEW_INTERVAL) || typeof +process.env.IO_TOKEN_RENEW_INTERVAL != 'number' ? 86400000 : +process.env.IO_TOKEN_RENEW_INTERVAL
+var ioTokenRenewStartHour = +process.env.IO_TOKEN_RENEW_START_HOUR
+var ioToken = ioTokenHash(yearMonthDay())
+
 
 app.use(express.json())
 
@@ -36,7 +38,6 @@ app.post('/', (req, res) => {
 
     res.send('OK')
 })
-
 
 io.on("connection", socket => {
     console.log("io con received", socket.handshake)
@@ -58,6 +59,10 @@ httpsServer.listen(3000, () => {
     console.log('Listening...')
 })
 
+scheduleIoTokenRenew()
+
+///// helpers /////
+
 function allowedOrigins() {
     return process.env.ALLOWED_ORIGINS.split(',')
 }
@@ -74,26 +79,26 @@ setInterval(function() {
     }
 }, 30000)
 
-function callOnMidnight() {
-    setInterval(function() {
-        ioToken = ioTokenHash(yearMonthDay())
-    }, hours24) // 86400000 = 24 hours
+function scheduleIoTokenRenew() {
+    let time = new Date()
+
+    ioTokenRenewStartHour = isNaN(ioTokenRenewStartHour) || (ioTokenRenewStartHour < 0 || ioTokenRenewStartHour > 23) ? time.getUTCHours() : ioTokenRenewStartHour
+    ioTokenRenewStartHour = ioTokenRenewStartHour === 0 ? 24 : ioTokenRenewStartHour
+    ioTokenRenewStartHour = ioTokenRenewStartHour <= time.getUTCHours() ? (time.getUTCHours()+1) : ioTokenRenewStartHour
+
+    time.setUTCHours(ioTokenRenewStartHour, 0, 0, 0)
+
+    let timeToNextIoTokenRenewInterval = time.getTime() - new Date().getTime()
+
+    setTimeout(renewIoToken, timeToNextIoTokenRenewInterval)
 }
 
-var time = new Date()
-if (time.getUTCHours() === 0 && time.getUTCMinutes() === 0) {
-    callOnMidnight()
-} else {
-    time.setUTCHours(0)
-    time.setUTCMinutes(0)
-    time.setUTCSeconds(0)
+function renewIoToken() {
+    ioToken = ioTokenHash(yearMonthDay(true))
 
-    let lastMidnightUTCtimestamp = time.getTime(),
-        nowTimestamp = new Date().getTime(),
-        difference = nowTimestamp - lastMidnightUTCtimestamp,
-        timeToNextMidnight = hours24 - difference
-
-    setTimeout(callOnMidnight, timeToNextMidnight)
+    setInterval(function() {
+        ioToken = ioTokenHash(yearMonthDay(true))
+    }, ioTokenRenewInterval)
 }
 
 function ioTokenHash(date) {
