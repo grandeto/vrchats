@@ -38,11 +38,15 @@ var socket = io(ioServer(), {
 });
 
 socket.on(ioUserId(), (...args) => {
-  console.log('event', args[0]);
+    // do something with event
+    console.log('event', args[0]);
 });
 
 socket.on("connect_error", (err) => {
-    if (err.message === "invalid credentials") {
-      location.reload();
+    if (err.message === "invalid token") {
+        console.error('Invalid token');
+        setTimeout(function () {
+            location.reload();
+        }, 5000);
     }
 });
