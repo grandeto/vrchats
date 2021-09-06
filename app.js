@@ -17,6 +17,7 @@ const ioOptions = {
       }
 }
 var ioToken = ioTokenHash(yearMonthDay())
+const hours24 = 1000 * 24 * 60 * 60;
 const io = require('socket.io')(httpsServer, ioOptions)
 
 app.use(express.json())
@@ -39,20 +40,14 @@ app.post('/', (req, res) => {
 
 io.on("connection", socket => {
     console.log("io con received", socket.handshake)
-    console.log('test', socket.handshake.auth.token == ioToken)
+    console.log('tokens match', socket.handshake.auth.token == ioToken)
     console.log('ioToken', ioToken)
-    // if (socket.handshake.auth.token != ioToken) {
-    //     console.log('token error')
-    //     socket.disconnect()
-    // } else {
-    //     console.log('connected', socket.handshake.headers.origin + ':' + socket.handshake.address)
-    // }
 })
 
 io.use((socket, next) => {
     if (socket.handshake.auth.token != ioToken) {
-        console.log('token error')
-        next(new Error("invalid credentials"))
+        console.log('auth token error')
+        next(new Error("invalid token"))
     } else {
         console.log('connected', socket.handshake.headers.origin + ':' + socket.handshake.address)
         next()
@@ -82,19 +77,23 @@ setInterval(function() {
 function callOnMidnight() {
     setInterval(function() {
         ioToken = ioTokenHash(yearMonthDay())
-    }, 1000 * 24 * 60 * 60)
+    }, hours24) // 86400000 = 24 hours
 }
 
-var nextMidnight = new Date()
-if (nextMidnight.getUTCHours() === 0) {
+var time = new Date()
+if (time.getUTCHours() === 0 && time.getUTCMinutes() === 0) {
     callOnMidnight()
 } else {
-    nextMidnight.setHours(0)
-    nextMidnight.setMinutes(0)
-    nextMidnight.setSeconds(0)
+    time.setUTCHours(0)
+    time.setUTCMinutes(0)
+    time.setUTCSeconds(0)
 
-    let difference = nextMidnight - new Date()
-    setTimeout(callOnMidnight, difference)
+    let lastMidnightUTCtimestamp = time.getTime(),
+        nowTimestamp = new Date().getTime(),
+        difference = nowTimestamp - lastMidnightUTCtimestamp,
+        timeToNextMidnight = hours24 - difference
+
+    setTimeout(callOnMidnight, timeToNextMidnight)
 }
 
 function ioTokenHash(date) {
