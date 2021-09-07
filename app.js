@@ -39,12 +39,6 @@ app.post('/', (req, res) => {
     res.send('OK')
 })
 
-io.on("connection", socket => {
-    console.log("io con received", socket.handshake)
-    console.log('tokens match', socket.handshake.auth.token == ioToken)
-    console.log('ioToken', ioToken)
-})
-
 io.use((socket, next) => {
     if (socket.handshake.auth.token != ioToken) {
         console.log('auth token error')

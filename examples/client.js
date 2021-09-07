@@ -43,7 +43,7 @@ if (ioToken() != "" && ioUserId() != "" && ioServer() != "") {
         reconnectionDelay: 5000,
         reconnectionDelayMax: 10000,
         auth: {
-            token: ioToken()+"1"
+            token: ioToken()
         }
     });
 
