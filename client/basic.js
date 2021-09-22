@@ -23,11 +23,11 @@ function setCookie(cname, cvalue, exdays) {
 }
 
 var ioToken = function() {
-    return getCookie('chat_token');
+    return getCookie('auth_token');
 };
 
 var ioUserId = function() {
-    return getCookie('user_chat_uuid');
+    return getCookie('chat_uuid');
 };
 
 var ioServer = function() {
