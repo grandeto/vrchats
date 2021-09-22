@@ -88,10 +88,10 @@ function scheduleIoTokenRenew() {
 }
 
 function renewIoToken() {
-    ioToken = ioTokenHash(yearMonthDay(true))
+    ioToken = ioTokenHash(yearMonthDay())
 
     setInterval(function() {
-        ioToken = ioTokenHash(yearMonthDay(true))
+        ioToken = ioTokenHash(yearMonthDay())
     }, ioTokenRenewInterval)
 }
 
