@@ -29,12 +29,13 @@ app.get('/', (req, res) => {
 })
 
 app.post('/', (req, res) => {
-    let to_uuid = req.body.to_uuid
-
-    delete req.body['from_uuid']
-    delete req.body['to_uuid']
-
-    io.emit(to_uuid, req.body)
+    io.emit(req.body.to.uuid, {
+        "from": {
+            "id": req.body.from.id
+        },
+        "to": null,
+        "msg": req.body.msg
+    })
 
     res.send('OK')
 })
