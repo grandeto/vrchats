@@ -21,6 +21,9 @@ const ioTokenRenewInterval = isNaN(+process.env.IO_TOKEN_RENEW_INTERVAL) || type
 var ioTokenRenewStartHour = +process.env.IO_TOKEN_RENEW_START_HOUR
 var ioToken = ioTokenHash(yearMonthDay())
 
+if (process.env.USE_PROXY == 1) {
+    app.set('trust proxy', process.env.TRUST_PROXY || true)
+}
 
 app.use(express.json())
 
@@ -97,7 +100,7 @@ function renewIoToken() {
 }
 
 function ioTokenHash(date) {
-    return SHA512(process.env.SECRET + date).toString()
+    return SHA512(process.env.AUTH_TOKEN_SECRET + date).toString()
 }
 
 function yearMonthDay() {
