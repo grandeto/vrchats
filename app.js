@@ -54,7 +54,7 @@ io.use((socket, next) => {
     }
 })
 
-httpsServer.listen(3000, () => {
+httpsServer.listen(process.env.PORT, () => {
     console.log('Listening...')
 })
 
