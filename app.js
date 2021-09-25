@@ -21,6 +21,7 @@ const ioTokenRenewInterval = isNaN(+process.env.IO_TOKEN_RENEW_INTERVAL) || type
 var ioTokenRenewStartHour = +process.env.IO_TOKEN_RENEW_START_HOUR
 var ioToken = ioTokenHash(yearMonthDay())
 
+app.set('x-powered-by', false)
 if (process.env.USE_PROXY == 1) {
     app.set('trust proxy', process.env.TRUST_PROXY || true)
 }
