@@ -1,5 +1,29 @@
 require('dotenv').config()
 
+const { createLogger, transports, format } = require('winston')
+require('winston-daily-rotate-file')
+const logger = createLogger({
+    level: 'info',
+    defaultMeta: {timestamp: new Date().toISOString(), pid: process.pid},
+    format: format.json(),
+    transports: [
+        new transports.DailyRotateFile(fileTransportLogsOpts('error', {level: 'error'})),
+        new transports.DailyRotateFile(fileTransportLogsOpts('combined')),
+    ],
+    exceptionHandlers: [
+        new transports.DailyRotateFile(fileTransportLogsOpts('exceptions'))
+    ],
+    rejectionHandlers: [
+        new transports.DailyRotateFile(fileTransportLogsOpts('rejections'))
+    ]
+})
+
+if (process.env.NODE_ENV !== 'production') {
+    logger.add(new transports.Console({
+        format: format.simple(),
+    }))
+}
+
 const SHA512 = require('crypto-js/sha512')
 const { readFileSync } = require('fs')
 const { isIP, inRange } = require('range_check')
@@ -25,11 +49,11 @@ const io = new Server(httpsServer, ioOptions)
 
 const ioTokenRenewInterval = isNaN(+process.env.IO_TOKEN_RENEW_INTERVAL) || typeof +process.env.IO_TOKEN_RENEW_INTERVAL != 'number' ? 86400000 : +process.env.IO_TOKEN_RENEW_INTERVAL
 
-const { RateLimiterMemory } = require('rate-limiter-flexible');
+const { RateLimiterMemory } = require('rate-limiter-flexible')
 const rateLimiter = new RateLimiterMemory({
     points: 1, // points
     duration: 1, // per second
-});
+})
 
 var ioTokenRenewStartHour = +process.env.IO_TOKEN_RENEW_START_HOUR
 var ioToken = ioTokenHash(yearMonthDay())
@@ -52,18 +76,24 @@ app.use((req, res, next) => {
         ip = req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for']
 
         if (!isIP(proxyIp) || !isIP(ip)) {
-            console.error('invalid proxy ip', {proxyIp: proxyIp, ip: ip})
+            logger.error('invalid proxy ip', {
+                proxyIp: proxyIp,
+                ip: ip
+            })
             res.status(403).send('Forbidden')
         } else if (!inRange(proxyIp, trustProxy) || !inRange(ip, allowedIps)) {
             // in case app is behind cloudflare, add cloudflare's ip ranges in .env TRUST_PROXY
-            console.error('forbidden proxy ip', {proxyIp: proxyIp, ip: ip})
+            logger.error('forbidden proxy ip', {
+                proxyIp: proxyIp,
+                ip: ip
+            })
             res.status(403).send('Forbidden')
         } else {
             next()
         }
     } else {
         if (!isIP(ip) || !inRange(ip, allowedIps)) {
-            console.error('forbidden or invalid real ip', {ip: ip})
+            logger.error('forbidden or invalid real ip', {ip: ip})
             res.status(403).send('Forbidden')
         } else {
             next()
@@ -78,13 +108,17 @@ app.get('/', (req, res) => {
 })
 
 app.post('/', (req, res) => {
-    io.emit(req.body.to.uuid, {
-        "from": {
-            "id": req.body.from.id
-        },
-        "to": null,
-        "msg": req.body.msg
-    })
+    if (new RegExp('^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$').test(req.body.to.uuid)) {
+        io.emit(req.body.to.uuid, {
+            from: {
+                id: req.body.from.id
+            },
+            to: {},
+            msg: req.body.msg
+        })
+    } else {
+        logger.error('Invalid to.uuid', {toUiid: req.body.to.uuid})
+    }
 
     res.status(200).send('OK')
 })
@@ -102,13 +136,21 @@ io.use(async (socket, next) => {
                             })
 
     if (hasToBeLimited) {
-        console.error('rate limit block', socket.handshake.query.uniqueUserId)
+        logger.error('rate limit block', {uniqueUserId: socket.handshake.query.uniqueUserId})
         next(new Error('rate limit block'))
     } else if (socket.handshake.auth.token != ioToken) {
-        console.error('auth token error', {token: ioToken, userToken: socket.handshake.auth.token, userId: socket.handshake.query.uniqueUserId})
+        logger.error('auth token error', {
+            token: ioToken,
+            userToken: socket.handshake.auth.token,
+            uniqueUserId: socket.handshake.query.uniqueUserId
+        })
         next(new Error('invalid token'))
     } else {
-        console.log('connected', socket.handshake.headers.origin + ':' + socket.handshake.address)
+        logger.info('connected', {
+            origin: socket.handshake.headers.origin,
+            realIp: socket.handshake.headers['cf-connecting-ip'] || socket.handshake.headers['x-forwarded-for'],
+            remote: socket.handshake.address
+        })
         next()
     }
 })
@@ -116,7 +158,7 @@ io.use(async (socket, next) => {
 // init //
 
 httpsServer.listen(process.env.PORT, () => {
-    console.log('Listening...')
+    logger.info('Listening...')
 })
 
 scheduleIoTokenRenew()
@@ -127,7 +169,7 @@ setInterval(function() {
             global.gc()
         }
     } catch (e) {
-        console.error('global.gc error')
+        logger.error('global.gc error')
         console.log("`node --nouse-idle-notification --expose-gc --max-old-space-size=8192 app.js`")
         process.exit()
     }
@@ -172,4 +214,15 @@ function ioTokenHash(date) {
 function yearMonthDay() {
     let date = new Date()
     return date.getUTCFullYear() + '-' + (date.getUTCMonth()+1)  + '-' + date.getUTCDate()
+}
+
+function fileTransportLogsOpts(name, opts = {}) {
+    return Object.assign({
+            dirname: './logs',
+            filename: name + '-%DATE%.log',
+            datePattern: 'YYYY-MM-DD',
+            zippedArchive: true,
+            maxSize: '20m',
+            maxFiles: '30d',
+            utc: true}, opts)
 }
