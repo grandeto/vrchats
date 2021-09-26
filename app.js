@@ -1,35 +1,80 @@
 require('dotenv').config()
-const SHA512 = require("crypto-js/sha512")
-const fs = require('fs')
 
-const express = require("express")
+const SHA512 = require('crypto-js/sha512')
+const { readFileSync } = require('fs')
+const { isIP, inRange } = require('range_check')
+
+const express = require('express')
 const app = express()
-const httpsServer = require("https").createServer({
-  key: fs.readFileSync(process.env.PRIV_KEY_PATH),
-  cert: fs.readFileSync(process.env.PUB_KEY_PATH)
+
+const { createServer } = require('https')
+const httpsServer = createServer({
+    key: readFileSync(process.env.PRIV_KEY_PATH),
+    cert: readFileSync(process.env.PUB_KEY_PATH)
 }, app)
 
 const ioOptions = {
     serveClient: false,
     cors: {
         origin: allowedOrigins(),
-        methods: ["GET", "POST"]
+        methods: ['GET', 'POST']
       }
 }
-const io = require('socket.io')(httpsServer, ioOptions)
+const { Server } = require('socket.io')
+const io = new Server(httpsServer, ioOptions)
+
 const ioTokenRenewInterval = isNaN(+process.env.IO_TOKEN_RENEW_INTERVAL) || typeof +process.env.IO_TOKEN_RENEW_INTERVAL != 'number' ? 86400000 : +process.env.IO_TOKEN_RENEW_INTERVAL
+
+const { RateLimiterMemory } = require('rate-limiter-flexible');
+const rateLimiter = new RateLimiterMemory({
+    points: 1, // points
+    duration: 1, // per second
+});
+
 var ioTokenRenewStartHour = +process.env.IO_TOKEN_RENEW_START_HOUR
 var ioToken = ioTokenHash(yearMonthDay())
 
+// express //
+
 app.set('x-powered-by', false)
+
 if (process.env.USE_PROXY == 1) {
     app.set('trust proxy', process.env.TRUST_PROXY || true)
 }
 
+app.use((req, res, next) => {
+    let allowedIps = process.env.ALLOWED_IPS.split(','),
+        trustProxy = process.env.TRUST_PROXY.split(','),
+        ip = fetchV4Ip(req.socket.remoteAddress)
+
+    if (process.env.USE_PROXY == 1) {
+        let proxyIp = ip
+        ip = req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for']
+
+        if (!isIP(proxyIp) || !isIP(ip)) {
+            console.error('invalid proxy ip', {proxyIp: proxyIp, ip: ip})
+            res.status(403).send('Forbidden')
+        } else if (!inRange(proxyIp, trustProxy) || !inRange(ip, allowedIps)) {
+            // in case app is behind cloudflare, add cloudflare's ip ranges in .env TRUST_PROXY
+            console.error('forbidden proxy ip', {proxyIp: proxyIp, ip: ip})
+            res.status(403).send('Forbidden')
+        } else {
+            next()
+        }
+    } else {
+        if (!isIP(ip) || !inRange(ip, allowedIps)) {
+            console.error('forbidden or invalid real ip', {ip: ip})
+            res.status(403).send('Forbidden')
+        } else {
+            next()
+        }
+    }
+})
+
 app.use(express.json())
 
 app.get('/', (req, res) => {
-    res.send('OK')
+    res.status(200).send('OK')
 })
 
 app.post('/', (req, res) => {
@@ -41,30 +86,40 @@ app.post('/', (req, res) => {
         "msg": req.body.msg
     })
 
-    res.send('OK')
+    res.status(200).send('OK')
 })
 
-io.use((socket, next) => {
-    if (socket.handshake.auth.token != ioToken) {
-        console.log('auth token error')
-        next(new Error("invalid token"))
+// socket.io //
+
+io.use(async (socket, next) => {
+    // consume 1 point per event from user id
+    let hasToBeLimited = await rateLimiter.consume(socket.handshake.query.uniqueUserId)
+                            .then(_ => {
+                                return false
+                            })
+                            .catch(_ => {
+                                return true
+                            })
+
+    if (hasToBeLimited) {
+        console.error('rate limit block', socket.handshake.query.uniqueUserId)
+        next(new Error('rate limit block'))
+    } else if (socket.handshake.auth.token != ioToken) {
+        console.error('auth token error', {token: ioToken, userToken: socket.handshake.auth.token, userId: socket.handshake.query.uniqueUserId})
+        next(new Error('invalid token'))
     } else {
         console.log('connected', socket.handshake.headers.origin + ':' + socket.handshake.address)
         next()
     }
 })
 
+// init //
+
 httpsServer.listen(process.env.PORT, () => {
     console.log('Listening...')
 })
 
 scheduleIoTokenRenew()
-
-///// helpers /////
-
-function allowedOrigins() {
-    return process.env.ALLOWED_ORIGINS.split(',')
-}
 
 setInterval(function() {
     try {
@@ -77,6 +132,16 @@ setInterval(function() {
         process.exit()
     }
 }, 30000)
+
+// helpers //
+
+function fetchV4Ip(ip) {
+    return ip.substr(0, 7) == '::ffff:' ? ip.substr(7) : ip
+}
+
+function allowedOrigins() {
+    return process.env.ALLOWED_ORIGINS.split(',')
+}
 
 function scheduleIoTokenRenew() {
     let time = new Date()
