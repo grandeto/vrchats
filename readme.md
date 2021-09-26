@@ -61,6 +61,6 @@ net.ipv4.ip_local_port_range = 10000 65535
 
 - Debug mode
 
-`DEBUG=* node --nouse-idle-notification --expose-gc --max-old-space-size=8192 app.js`
+`DEBUG=* node --nouse-idle-notification --expose-gc --max-old-space-size=8192 --trace-sync-io app.js`
 
 
