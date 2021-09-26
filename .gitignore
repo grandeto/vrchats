@@ -4,3 +4,6 @@ node_modules
 *.pem
 .env
 .editorconfig
+*.log
+*.log.gz
+*audit.json
