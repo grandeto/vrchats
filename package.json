@@ -18,6 +18,8 @@
     "crypto-js": "^4.1.1",
     "dotenv": "^10.0.0",
     "express": "^4.17.1",
+    "range_check": "^2.0.4",
+    "rate-limiter-flexible": "^2.2.4",
     "socket.io": "^4.2.0"
   },
   "optionalDependencies": {
