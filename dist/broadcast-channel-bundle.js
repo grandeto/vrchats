@@ -1,7 +1,7 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 require('@babel/polyfill');
 
-var io = require("socket.io-client"),
+var io = require('socket.io-client'),
     _require = require('broadcast-channel'),
     BroadcastChannel = _require.BroadcastChannel,
     createLeaderElection = _require.createLeaderElection,
@@ -10,7 +10,7 @@ var io = require("socket.io-client"),
     leaderElector = createLeaderElection(channel);
 
 var getCookie = function(cname) {
-        var name = cname + "=";
+        var name = cname + '=';
         var ca = document.cookie.split(';');
         for(var i = 0; i < ca.length; i++) {
             var c = ca[i];
@@ -21,13 +21,13 @@ var getCookie = function(cname) {
                 return c.substring(name.length, c.length);
             }
         }
-        return "";
+        return '';
     },
     setCookie = function(cname, cvalue, exdays) {
         var d = new Date();
         d.setTime(d.getTime() + (exdays * 24 * 60 * 60 * 1000));
-        var expires = "expires="+d.toUTCString();
-        document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/;Secure=true;SameSite=Lax";
+        var expires = 'expires='+d.toUTCString();
+        document.cookie = cname + '=' + cvalue + ';' + expires + ';path=/;Secure=true;SameSite=Lax';
     };
 
 channel.onmessage = msg => console.log('msg received', msg);
@@ -43,7 +43,7 @@ leaderElector.awaitLeadership().then(function () {
         res;
 
     xhr.withCredentials = true;
-    xhr.addEventListener("readystatechange", function() {
+    xhr.addEventListener('readystatechange', function() {
         if(this.readyState === 4) {
             res = JSON.parse(this.responseText);
             ioToken = res.auth_token;
@@ -58,6 +58,9 @@ leaderElector.awaitLeadership().then(function () {
                     rejectUnauthorized: false, // ssl verify
                     reconnectionDelay: 5000,
                     reconnectionDelayMax: 10000,
+                    query: {
+                        uniqueUserId: ioUserId
+                    },
                     auth: {
                         token: ioToken
                     }
@@ -69,27 +72,35 @@ leaderElector.awaitLeadership().then(function () {
                     channel.postMessage(args[0]);
                 });
 
-                socket.on("connect_error", (err) => {
-                    if (err.message === "invalid token") {
-                        console.error('Invalid token');
-                        var chat_reload = getCookie('chat_reload');
-                        if (chat_reload == "" || +chat_reload < 6) {
-                            setCookie('chat_reload', +chat_reload+1, 1);
-                            setTimeout(function () {
-                                location.reload();
-                            }, 5000);
-                        } else {
-                            setTimeout(function () {
-                                setCookie('chat_reload', "", -1);
-                                location.reload();
-                            }, 600000);
-                        }
+                socket.on('connect_error', (err) => {
+                    switch (err.message) {
+                        case 'rate limit block':
+                            console.error(err.message);
+                            break;
+                        case 'invalid token':
+                            console.error(err.message);
+                            var chat_reload = getCookie('chat_reload');
+                            if (chat_reload == '' || +chat_reload < 6) {
+                                setCookie('chat_reload', +chat_reload+1, 1);
+                                setTimeout(function () {
+                                    location.reload();
+                                }, 5000);
+                            } else {
+                                setTimeout(function () {
+                                    setCookie('chat_reload', '', -1);
+                                    location.reload();
+                                }, 600000);
+                            }
+                            break;
+                        default:
+                          console.error('unknown error', err.message);
+                          break;
                     }
                 });
             }
         }
     });
-    xhr.open("GET", document.location.origin + "/vrchats/resources");
+    xhr.open('GET', document.location.origin + '/vrchats/resources');
     xhr.send();
 });
 
