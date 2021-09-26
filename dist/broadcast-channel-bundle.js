@@ -93,7 +93,7 @@ leaderElector.awaitLeadership().then(function () {
                             }
                             break;
                         default:
-                          console.error('unknown error', err.message);
+                          console.error('error:', err.message);
                           break;
                     }
                 });
