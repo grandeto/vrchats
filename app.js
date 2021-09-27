@@ -18,7 +18,6 @@ const logger = createLogger({
     ],
     exitOnError: false
 })
-
 if (process.env.NODE_ENV !== 'production') {
     logger.add(new transports.Console({
         format: format.simple(),
@@ -33,10 +32,15 @@ const express = require('express')
 const app = express()
 
 const { createServer } = require('https')
-const httpsServer = createServer({
+var httpsOpts = {
     key: readFileSync(process.env.PRIV_KEY_PATH),
     cert: readFileSync(process.env.PUB_KEY_PATH)
-}, app)
+}
+if (process.env.VERIFY_ORIGIN == 1) {
+    httpsOpts.ca = readFileSync(process.env.CA_PATH)
+    httpsOpts.requestCert = true
+}
+const httpsServer = createServer(httpsOpts, app)
 
 const ioOptions = {
     serveClient: false,
