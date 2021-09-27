@@ -224,7 +224,7 @@ function yearMonthDay() {
 
 function fileTransportLogsOpts(name, opts = {}) {
     return Object.assign({
-            dirname: './logs',
+            dirname: process.env.LOGS_DIR,
             filename: name + '-%DATE%.log',
             datePattern: 'YYYY-MM-DD',
             zippedArchive: true,
