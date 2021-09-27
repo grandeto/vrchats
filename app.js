@@ -15,7 +15,8 @@ const logger = createLogger({
     ],
     rejectionHandlers: [
         new transports.DailyRotateFile(fileTransportLogsOpts('rejections'))
-    ]
+    ],
+    exitOnError: false
 })
 
 if (process.env.NODE_ENV !== 'production') {
@@ -76,24 +77,18 @@ app.use((req, res, next) => {
         ip = req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for']
 
         if (!isIP(proxyIp) || !isIP(ip)) {
-            logger.error('invalid proxy ip', {
-                proxyIp: proxyIp,
-                ip: ip
-            })
+            logger.error('invalid proxy_ip or ip', loggerMetadata(req))
             res.status(403).send('Forbidden')
         } else if (!inRange(proxyIp, trustProxy) || !inRange(ip, allowedIps)) {
             // in case app is behind cloudflare, add cloudflare's ip ranges in .env TRUST_PROXY
-            logger.error('forbidden proxy ip', {
-                proxyIp: proxyIp,
-                ip: ip
-            })
+            logger.error('untrusted proxy_ip or ip', loggerMetadata(req))
             res.status(403).send('Forbidden')
         } else {
             next()
         }
     } else {
         if (!isIP(ip) || !inRange(ip, allowedIps)) {
-            logger.error('forbidden or invalid real ip', {ip: ip})
+            logger.error('invalid or untrusted ip', loggerMetadata(req))
             res.status(403).send('Forbidden')
         } else {
             next()
@@ -117,10 +112,18 @@ app.post('/', (req, res) => {
             msg: req.body.msg
         })
     } else {
-        logger.error('Invalid to.uuid', {toUiid: req.body.to.uuid})
+        logger.error('Invalid to.uuid', loggerMetadata(req, {
+            toUiid: req.body.to.uuid,
+            fromId: req.body.from.id
+        }))
     }
 
     res.status(200).send('OK')
+})
+
+app.use((err, req, res, next) => {
+    logger.error('req/res error', loggerMetadata(req, {stack: err.stack}))
+    res.status(500).send('ISE')
 })
 
 // socket.io //
@@ -136,21 +139,20 @@ io.use(async (socket, next) => {
                             })
 
     if (hasToBeLimited) {
-        logger.error('rate limit block', {uniqueUserId: socket.handshake.query.uniqueUserId})
+        logger.error('rate limit block', loggerMetadata(socket.handshake, {uniqueUserId: socket.handshake.query.uniqueUserId}))
         next(new Error('rate limit block'))
     } else if (socket.handshake.auth.token != ioToken) {
-        logger.error('auth token error', {
+        logger.error('auth token error', loggerMetadata(socket.handshake, {
             token: ioToken,
-            userToken: socket.handshake.auth.token,
+            tokenReceived: socket.handshake.auth.token,
             uniqueUserId: socket.handshake.query.uniqueUserId
-        })
+        }))
         next(new Error('invalid token'))
     } else {
-        logger.info('connected', {
+        logger.info('connected', loggerMetadata(socket.handshake, {
             origin: socket.handshake.headers.origin,
-            realIp: socket.handshake.headers['cf-connecting-ip'] || socket.handshake.headers['x-forwarded-for'],
-            remote: socket.handshake.address
-        })
+            uniqueUserId: socket.handshake.query.uniqueUserId
+        }))
         next()
     }
 })
@@ -225,4 +227,31 @@ function fileTransportLogsOpts(name, opts = {}) {
             maxSize: '20m',
             maxFiles: '30d',
             utc: true}, opts)
+}
+
+function loggerMetadata(req, data = {}) {
+    let forwardedIp, remoteIp
+
+    if (!req.hasOwnProperty('headers')) {
+        forwardedIp = null
+    } else if (req['headers'].hasOwnProperty('cf-connecting-ip')) {
+        forwardedIp = req['headers']['cf-connecting-ip']
+    } else if (req['headers'].hasOwnProperty('x-forwarded-for')) {
+        forwardedIp = req['headers']['x-forwarded-for']
+    } else {
+        forwardedIp = null
+    }
+
+    if (req.hasOwnProperty('socket')) {
+        remoteIp = req.socket.remoteAddress
+    } else if (req.hasOwnProperty('address')) {
+        remoteIp = req['address']
+    } else {
+        remoteIp = null
+    }
+
+    return Object.assign({
+        forwardedIp: forwardedIp,
+        remoteIp: remoteIp,
+    }, data)
 }
