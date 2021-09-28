@@ -53,11 +53,10 @@ leaderElector.awaitLeadership().then(function () {
             if (ioToken && ioUserId && ioServer) {
                 var socket = io(ioServer, {
                     upgrade: true,
-                    rememberUpgrade: true,
                     secure: true,
-                    rejectUnauthorized: false, // ssl verify
-                    reconnectionDelay: 5000,
-                    reconnectionDelayMax: 10000,
+                    rejectUnauthorized: true, // ssl verify
+                    reconnectionDelay: 10000,
+                    reconnectionDelayMax: 20000,
                     query: {
                         uniqueUserId: ioUserId
                     },
