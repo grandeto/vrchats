@@ -107,14 +107,10 @@ app.get('/', (req, res) => {
 })
 
 app.post('/', (req, res) => {
-    if (new RegExp('^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$').test(req.body.to.uuid)) {
-        io.emit(req.body.to.uuid, {
-            from: {
-                id: req.body.from.id
-            },
-            to: {},
-            msg: req.body.msg
-        })
+    if (new RegExp('^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$').test(req.body.uuid)) {
+        let to = req.body.uuid
+        delete req.body.uuid
+        io.emit(to, req.body)
     } else {
         logger.error('Invalid to.uuid', loggerMetadata(req, {
             toUiid: req.body.to.uuid,
