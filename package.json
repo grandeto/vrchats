@@ -5,8 +5,8 @@
   "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build:client": "browserify client/broadcast-channel.js > dist/broadcast-channel-bundle.js",
-    "build:client:min": "npm run build:client && uglifyjs --compress --mangle --output dist/broadcast-channel-bundle.min.js -- dist/broadcast-channel-bundle.js"
+    "build:client": "browserify client/broadcast.js > dist/broadcast-bundle.js",
+    "build:client:min": "npm run build:client && uglifyjs --compress --mangle --output dist/broadcast-bundle.min.js -- dist/broadcast-bundle.js"
   },
   "repository": {
     "type": "git",
