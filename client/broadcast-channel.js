@@ -1,6 +1,6 @@
 require('@babel/polyfill');
 
-var io = require('socket.io-client'),
+const io = require('socket.io-client'),
     _require = require('broadcast-channel'),
     BroadcastChannel = _require.BroadcastChannel,
     createLeaderElection = _require.createLeaderElection,
@@ -8,11 +8,11 @@ var io = require('socket.io-client'),
     channel = new BroadcastChannel(channelName),
     leaderElector = createLeaderElection(channel);
 
-var getCookie = function(cname) {
-        var name = cname + '=';
-        var ca = document.cookie.split(';');
-        for(var i = 0; i < ca.length; i++) {
-            var c = ca[i];
+const getCookie = function(cname) {
+        let name = cname + '=';
+        let ca = document.cookie.split(';');
+        for(let i = 0; i < ca.length; i++) {
+            let c = ca[i];
             while (c.charAt(0) == ' ') {
                 c = c.substring(1);
             }
@@ -23,19 +23,21 @@ var getCookie = function(cname) {
         return '';
     },
     setCookie = function(cname, cvalue, exdays) {
-        var d = new Date();
+        let d = new Date();
         d.setTime(d.getTime() + (exdays * 24 * 60 * 60 * 1000));
-        var expires = 'expires='+d.toUTCString();
+        let expires = 'expires='+d.toUTCString();
         document.cookie = cname + '=' + cvalue + ';' + expires + ';path=/;Secure=true;SameSite=Lax';
     };
 
-channel.onmessage = msg => console.log('msg received', msg);
+channel.onmessage = msg => {
+    let newMsgsElement = msg.newMsgsElement,
+        chatStreamElement = msg.chatStreamElement;
+
+    handleMsg(newMsgsElement, chatStreamElement, msg)
+};
 
 leaderElector.awaitLeadership().then(function () {
-    console.log('is leader');
-    document.title = '♛ Is Leader!';
-
-    var ioToken,
+    let ioToken,
         ioUserId,
         ioServer,
         xhr = new XMLHttpRequest(),
@@ -45,12 +47,12 @@ leaderElector.awaitLeadership().then(function () {
     xhr.addEventListener('readystatechange', function() {
         if(this.readyState === 4) {
             res = JSON.parse(this.responseText);
-            ioToken = res.auth_token;
-            ioUserId = res.chat_uuid;
-            ioServer = res.chat_server;
+            ioToken = res.authToken;
+            ioUserId = res.chatUuid;
+            ioServer = res.chatServer;
 
             if (ioToken && ioUserId && ioServer) {
-                var socket = io(ioServer, {
+                let socket = io(ioServer, {
                     upgrade: true,
                     secure: true,
                     rejectUnauthorized: true, // ssl verify
@@ -65,34 +67,32 @@ leaderElector.awaitLeadership().then(function () {
                 });
 
                 socket.on(ioUserId, (...args) => {
-                    // do something with the event data
-                    console.log('event handled by leader', args[0]);
-                    channel.postMessage(args[0]);
+                    let msg = Object.assign({}, args[0]);
+
+                    handleMsg(res.newMsgsElement, res.chatStreamElement, args[0]);
+
+                    msg.newMsgsElement = res.newMsgsElement;
+                    msg.chatStreamElement = res.chatStreamElement;
+
+                    channel.postMessage(msg);
                 });
 
                 socket.on('connect_error', (err) => {
-                    switch (err.message) {
-                        case 'rate limit block':
-                            console.error(err.message);
-                            break;
-                        case 'invalid token':
-                            console.error(err.message);
-                            var chat_reload = getCookie('chat_reload');
-                            if (chat_reload == '' || +chat_reload < 6) {
-                                setCookie('chat_reload', +chat_reload+1, 1);
-                                setTimeout(function () {
-                                    location.reload();
-                                }, 5000);
-                            } else {
-                                setTimeout(function () {
-                                    setCookie('chat_reload', '', -1);
-                                    location.reload();
-                                }, 600000);
-                            }
-                            break;
-                        default:
-                          console.error('error:', err.message);
-                          break;
+                    if (res.env == 'dev' || res.isAdmin) {
+                        console.error(err.message);
+                    } else if (err.message == 'invalid token') {
+                        let chat_reload = getCookie('chat_reload');
+                        if (chat_reload == '' || +chat_reload < 6) {
+                            setCookie('chat_reload', +chat_reload+1, 1);
+                            setTimeout(function () {
+                                location.reload();
+                            }, 5000); // 5s
+                        } else {
+                            setTimeout(function () {
+                                setCookie('chat_reload', '', -1);
+                                location.reload();
+                            }, 600000); // 10m
+                        }
                     }
                 });
             }
@@ -101,3 +101,42 @@ leaderElector.awaitLeadership().then(function () {
     xhr.open('GET', document.location.origin + '/vrchats/resources');
     xhr.send();
 });
+
+function handleMsg(newMsgsElement, chatStreamElement, msg) {
+    delete msg.newMsgsElement;
+    delete msg.chatStreamElement;
+
+    if (msg.type == 'inbox') {
+        document.title = document.title.split(' ')[0] + ' +1 new msg'
+
+        let newMsgsEl = document.querySelector(newMsgsElement);
+
+        if (newMsgsEl) {
+            newMsgsEl.innerText = 'new';
+        }
+    }
+
+    let appElement = document.querySelector(chatStreamElement);
+
+    if (appElement) {
+        let appScope = angular.element(appElement).scope(),
+            controllerScope = appScope.$$childHead;
+
+        if (msg.type == 'inbox' && controllerScope.currentContactId != msg.from_user_id) {
+            return;
+        }
+
+        if (msg.type == 'sent' && controllerScope.currentContactId != msg.to_user_id) {
+            return;
+        }
+
+        if (!controllerScope.messages[msg.id]) {
+            let newMsg = {};
+            newMsg[msg.id] = msg;
+
+            controllerScope.$apply(function() {
+                controllerScope.messages = Object.assign(controllerScope.messages, newMsg);
+            });
+        }
+    }
+}
