@@ -1,5 +1,5 @@
 {
-  "name": "vrchats",
+  "name": "@grandeto/vrchats",
   "version": "1.0.0",
   "description": "Event driven real-time chat based on Socket.io",
   "main": "app.js",
