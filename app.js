@@ -3,9 +3,9 @@ require('dotenv').config()
 if (process.env.CLUSTER_MODE == 1) {
     const resolveGlobal = require('resolve-global');
     try {
-        resolveGlobal('@grandeto/socket.io-pm2')
+        resolveGlobal('@grandeto/pm2-socket.io')
     } catch(e) {
-        console.error('@grandeto/socket.io-pm2 not installed globally. Run: npm i -g @grandeto/socket.io-pm2', e)
+        console.error('@grandeto/pm2-socket.io not installed globally. Run: npm i -g @grandeto/pm2-socket.io', e)
         process.exit()
     }
     const vrchatsCluster = require('./cluster.js')
