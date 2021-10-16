@@ -1,6 +1,6 @@
 {
-  "name": "vrchats",
-  "version": "1.0.0",
+  "name": "@grandeto/vrchats",
+  "version": "0.2.0",
   "description": "Event driven real-time chat based on Socket.io",
   "main": "app.js",
   "scripts": {
@@ -20,6 +20,7 @@
     "express": "^4.17.1",
     "range_check": "^2.0.4",
     "rate-limiter-flexible": "^2.2.4",
+    "resolve-global": "^1.0.0",
     "socket.io": "^4.2.0",
     "winston": "^3.3.3",
     "winston-daily-rotate-file": "^4.5.5"
