@@ -34,9 +34,9 @@ pm2 start /var/www/vrchats/standalone.config.js
 ### Note: This is actually a partial cluster single node implementation
 
 
-It depends on [@grandeto/pm2-socket.io](https://github.com/grandeto/pm2) that can be used as a drop-in replacement for `pm2`, and supports all the commands of the class `pm2` utility.
+It depends on [@grandeto/pm2-socket.io](https://github.com/grandeto/pm2) that can be used as a drop-in replacement for `pm2`, and supports all the commands of the class `pm2` utility
 
-The only difference comes from this [commit]()
+The only difference comes from [grandeto commits](https://github.com/grandeto/pm2/commits/5.1.2-grandeto-socket.io?author=grandeto)
 
 The `pm2` God process now creates its own HTTPS express socket.io server instance that handles the socket.io consumers' connections and push the events from socket.io producers to them
 
