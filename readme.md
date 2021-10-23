@@ -4,24 +4,78 @@ Event-driven real-time chat processor based on Socket.io
 
 # Requirements
 
-- Node.js v14.17.6
+- Node.js v14.x
+- npm 8.x
+
+
+```bash
+cd
+echo 'export NODE_V=v14.18.1' >> $HOME/.profile
+source ~/.profile
+wget https://nodejs.org/dist/$NODE_V/node-$NODE_V-linux-x64.tar.xz
+
+# /usr/local install
+sudo mkdir -p /usr/local/lib/nodejs
+sudo tar -xJf node-$NODE_V-linux-x64.tar.xz -C /usr/local/lib/nodejs
+sudo chown -R root.root /usr/local/lib/nodejs
+sudo find /usr/local/lib/nodejs -type d -exec chmod 755 {} \;
+echo 'export PATH=$PATH:/usr/local/lib/nodejs/node-$NODE_V-linux-x64/bin' >> $HOME/.profile
+mkdir -p $HOME/.nodejs/node-$NODE_V-linux-x64
+npm config set prefix $HOME/.nodejs/node-$NODE_V-linux-x64
+echo 'export PATH=$PATH:$HOME/.nodejs/node-$NODE_V-linux-x64/bin' >> $HOME/.profile
+sudo rm /usr/local/lib/nodejs/node-$NODE_V-linux-x64/bin/np*
+source ~/.profile
+npm install -g npm
+
+# /home/user install
+mkdir $HOME/.nodejs
+tar -xJf node-$NODE_V-linux-x64.tar.xz -C $HOME/.nodejs
+sudo chown -R $USER.$USER $HOME/.nodejs
+sudo find $HOME/.nodejs -type d -exec chmod 755 {} \;
+npm config set prefix $HOME/.nodejs/node-$NODE_V-linux-x64
+echo 'export PATH=$PATH:$HOME/.nodejs/node-$NODE_V-linux-x64/bin' >> $HOME/.profile
+source ~/.profile
+npm install -g npm
+
+reboot
+```
 
 # Features
 
-- HTTPS events listener (Cluster mode supported)
-- Whitelisting of origins, ip ranges, proxy ranges
-- Clients connection Auth and Rate Limiter
+- Events listener HTTPS (Cluster mode supported)
+- Whitelisting origins, ip ranges, proxy ranges
+- Subscribers connection Auth, Rate Limiter
 
 # Start the app
 
+- As a regular sudo user
+
 ```bash
+sudo mkdir -p /var/www/vrchats
+sudo chown $USER.$USER /var/www/vrchats/
+cd /var/www/vrchats
+echo 'export VRCHATS_DIR=/var/www/vrchats ' >> $HOME/.profile
+source ~/.profile
+git clone https://github.com/grandeto/vrchats.git .
 npm install
+touch .env
 ```
 
+- Populate `.env` file following the env variables in `.env_example`
+
+```bash
+chmod 600 .env
+```
+
+- Add `pubkey.pem`, `privkey.pem`, `ca.pem`
+
+```bash
+chmod 600 *.pem
+```
+
+- Whitelist defined ports in .env in your firewall
+
 ## Standalone mode with HTTPS support (Single threaded)
-
-
-Create `.env` file and populate the env variables found in `.env_example` into it
 
 ```bash
 npm install -g pm2 && \
@@ -38,39 +92,117 @@ It depends on [@grandeto/pm2-socket.io](https://github.com/grandeto/pm2) that ca
 
 The only difference comes from [grandeto commits](https://github.com/grandeto/pm2/commits/5.1.2-grandeto-socket.io?author=grandeto)
 
-The `pm2` God process now creates its own HTTPS express socket.io server instance that handles the socket.io consumers' connections and push the events from socket.io producers to them
+The `pm2` God process now creates its own HTTPS express socket.io server instance that handles the socket.io consumers' connections and push the events from the socket.io event producers to them
 
-At the same time `pm2` will bootstrap as many `@grandeto/vrchats producers` as threads-1 available on the node
+At the same time `pm2` will bootstrap as many `@grandeto/vrchats producers` as defined in `CLUSTER_INSTANCES` env variable
 
-The so called producers are HTTPS express instances that expose simple HTTPS API and listen for incoming events and propagate them to the initiated by `pm2` God process socket.io server. The producers are socket.io agnostic and could be used from any backend by just sending a POST request containing the event
+The so called producers are express instances that expose a simple HTTPS API and listen for incoming events and emit them to the initiated by `pm2` God process socket.io server. 
+The producers are socket.io agnostic and could be used from any backend by just sending a POST request containing the event
 
-The initiated by `pm2` God process socket.io server is not spread to all of the node threads thus this cluster mode is actually partial cluster
+The initiated by `pm2` God process socket.io server is not spread to all of the threads thus this cluster mode actually act as partially clusterized
 
-For multi-node clustering an in-front proxy load balancer that ensures sticky connections to the nodes behind is needed
-
-If `pm2` is already installed, you will have to remove it first:
+- If `pm2` is already installed, you will have to remove it first:
 
 ```bash
 npm remove -g pm2
 ```
 
-then install `@grandeto/pm2-socket.io`
+- then install `@grandeto/pm2-socket.io`
 
 ```bash
 npm install -g @grandeto/pm2-socket.io
 ```
 
-Start the app by
+- Start the app by (set the variable in the example according you needs)
 
 ```bash
-NODE_ENV="production" CLUSTER_MODE=1 PORT=2053 PM2_PORT=8443 ALLOWED_ORIGINS="https://example.com" ALLOWED_IPS="123.123.123.123/32,127.0.0.1/32,::1/128" TRUST_PROXY="103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,104.16.0.0/13,104.24.0.0/14,108.162.192.0/18,131.0.72.0/22,141.101.64.0/18,162.158.0.0/15,172.64.0.0/13,173.245.48.0/20,188.114.96.0/20,190.93.240.0/20,197.234.240.0/22,198.41.128.0/17,2400:cb00::/32,2606:4700::/32,2803:f800::/32,2405:b500::/32,2405:8100::/32,2c0f:f248::/32,2a06:98c0::/29" PUB_KEY_PATH="/var/www/vrchats/pubkey.pem" PRIV_KEY_PATH="/var/www/vrchats/privkey.pem" CA_PATH="/var/www/vrchats/ca.pem" VERIFY_ORIGIN=1 IO_TOKEN_RENEW_START_HOUR=0 IO_TOKEN_RENEW_INTERVAL=86400000 USE_PROXY=1 LOGS_DIR="/var/www/vrchats/logs" AUTH_TOKEN_SECRET="some-nasty-secret" pm2 start /var/www/vrchats/cluster.config.js
+NODE_ENV="production" CLUSTER_MODE=1 CLUSTER_INSTANCES="-1" PRODUCER_PORT=2053 CONSUMER_PORT=8443 ALLOWED_ORIGINS="https://example.com" ALLOWED_IPS="123.123.123.123/32,127.0.0.1/32,::1/128" USE_PROXY=1 TRUST_PROXY="103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,104.16.0.0/13,104.24.0.0/14,108.162.192.0/18,131.0.72.0/22,141.101.64.0/18,162.158.0.0/15,172.64.0.0/13,173.245.48.0/20,188.114.96.0/20,190.93.240.0/20,197.234.240.0/22,198.41.128.0/17,2400:cb00::/32,2606:4700::/32,2803:f800::/32,2405:b500::/32,2405:8100::/32,2c0f:f248::/32,2a06:98c0::/29" PUB_KEY_PATH="$VRCHATS_DIR/pubkey.pem" PRIV_KEY_PATH="$VRCHATS_DIR/privkey.pem" CA_PATH="$VRCHATS_DIR/ca.pem" VERIFY_ORIGIN=1 IO_TOKEN_RENEW_START_HOUR=0 IO_TOKEN_RENEW_INTERVAL=86400000 LOGS_DIR="$VRCHATS_DIRlogs" AUTH_TOKEN_SECRET="some-nasty-secret" pm2 start $VRCHATS_DIR/cluster.config.js
 ```
+
+- Test the app
+
+```
+https://example.com:2053 - should return 200 OK
+
+https://example.com:8443 - should return 404 "Cannot GET /"
+```
+
+- Save the pm2 app settings
+
+```bash
+pm2 save
+```
+
+- Create pm2 startup deamon
+
+```bash
+pm2 startup
+```
+
+- Copy and execute the output command generated by `pm2 startup` then:
+
+`sudo nano /etc/systemd/system/pm2-$USER.service` and:
+
+add `Wants=network-online.target` above `After=network.target`
+
+add `RequiresMountsFor=/home` above `After=network.target`
+
+change `After=network.target` to `After=network.target network-online.target`
+
+change `WantedBy=multi-user.target` to `WantedBy=multi-user.target network-online.target`
+
+add under `[Service]` the following env variables:
+
+```
+Environment=NODE_ENV=production
+Environment=CLUSTER_MODE=1
+Environment=CLUSTER_INSTANCES="-1"
+Environment=PRODUCER_PORT=2053
+Environment=CONSUMER_PORT=8443
+Environment=STANDALONE_PORT=8443
+Environment=ALLOWED_ORIGINS="https://example.com"
+Environment=ALLOWED_IPS="123.123.123.123/32,127.0.0.1/32,::1/128"
+Environment=USE_PROXY=1
+Environment=TRUST_PROXY="103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,104.16.0.0/13,104.24.0.0/14,108.162.192.0/18,131.0.72.0/22,141.101.64.0/18,162.158.0.0/15,172.64.0.0/13,173.245.48.0/20,188.114.96.0/20,190.93.240.0/20,197.234.240.0/22,198.41.128.0/17,2400:cb00::/32,2606:4700::/32,2803:f800::/32,2405:b500::/32,2405:8100::/32,2c0f:f248::/32,2a06:98c0::/29"
+Environment=PUB_KEY_PATH=/var/www/vrchats/pubkey.pem
+Environment=PRIV_KEY_PATH=/var/www/vrchats/privkey.pem
+Environment=CA_PATH=/var/www/vrchats/ca.pem
+Environment=VERIFY_ORIGIN=1
+Environment=IO_TOKEN_RENEW_START_HOUR=0
+Environment=IO_TOKEN_RENEW_INTERVAL=86400000
+Environment=LOGS_DIR=/var/www/vrchats/logs
+Environment=AUTH_TOKEN_SECRET="some-nasty-secret"
+```
+
+- Execute `sudo systemctl daemon-reload`
+
+- reboot
+
+- after reboot test the service is operational
+
+```
+pm2 ls - should display list of running instances having status online
+
+https://example.com:2053 - should return 200 OK
+
+https://example.com:8443 - should return 404 "Cannot GET /"
+```
+
+
+# Troubleshooting and known issues
+
+- [pm2 docs - journalctl -u pm2-$USER.service](https://pm2.keymetrics.io/docs/usage/startup/)
+
+- [stackoverflow 43786412](https://stackoverflow.com/questions/43786412/get-message-spawning-pm2-daemon-with-pm2-home-home-dir-pm2-always/69510630#69510630)
+
+- If your home directory is encrypted in order to demonize with `pm2 startup` all the node.js, npm and app raleted files should be outside of the home dir or try [link1](https://bbs.archlinux.org/viewtopic.php?id=201781) [link2](https://superuser.com/questions/1037466/how-to-start-a-systemd-service-after-user-login-and-stop-it-before-user-logout) [link3](https://bbs.archlinux.org/viewtopic.php?id=244264)
 
 # Start locally in debug mode
 
 Create `.env` file and populate the env variables found in `.env_example` into it
 
 ```bash
+cd $VRCHATS_DIR
 DEBUG=* CLUSTER_MODE=0 node --nouse-idle-notification --expose-gc --max-old-space-size=8192 --trace-sync-io app.js
 ```
 
