@@ -107,7 +107,7 @@ function socketProducerInit() {
     })
 
     // producers listening
-    httpsServer.listen(process.env.PRODUCER_PORT || 2053, () => {
+    httpsServer.listen(+process.env.PRODUCER_PORT || 2053, () => {
         logger.info('Listening...' + process.env.PRODUCER_PORT, helpers.loggerMetadata())
     })
 
@@ -187,7 +187,7 @@ function socketConsumerInit(msgBuss) {
     })
 
     // consumers listening
-    httpsServer.listen(process.env.CONSUMER_PORT || 8443, () => {
+    httpsServer.listen(+process.env.CONSUMER_PORT || 8443, () => {
         logger.info('Listening...' + process.env.CONSUMER_PORT, helpers.loggerMetadata())
     })
 
