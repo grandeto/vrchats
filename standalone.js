@@ -162,7 +162,7 @@ function standaloneInit() {
 
     // init //
 
-    httpsServer.listen(process.env.STANDALONE_PORT || 8443, () => {
+    httpsServer.listen(+process.env.STANDALONE_PORT || 8443, () => {
         logger.info('Listening...' + process.env.STANDALONE_PORT, helpers.loggerMetadata())
     })
 
