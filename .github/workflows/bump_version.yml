@@ -1,0 +1,43 @@
+on: push
+name: Bump package version
+jobs:
+  checkVersion:
+    name: Bump package.json version
+    outputs:
+      new_sha: ${{ steps.sha.outputs.SHA }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      # Use this GitHub Action
+      - name: Bump package.json version
+        uses: technote-space/package-version-check-action@v1
+        with:
+          BRANCH_PREFIX: v
+          COMMIT_MESSAGE: 'action: bump package.json version'
+      - name: get sha
+        id: sha
+        run: |
+          sha_new=$(git rev-parse HEAD)
+          echo $sha_new
+          echo "::set-output name=SHA::$sha_new"
+      - run:
+          echo ${{ steps.sha.outputs.SHA }}
+  checkLockVersion:
+    name: Bump package-lock.json version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ needs.checkVersion.outputs.new_sha }}
+          fetch-depth: 0
+      - run:
+          git log -5
+
+      # Use this GitHub Action
+      - name: Bump package-lock.json version
+        uses: technote-space/package-version-check-action@v1
+        with:
+          BRANCH_PREFIX: v
+          PACKAGE_NAME: 'package-lock.json'
+          COMMIT_MESSAGE: 'action: bump package-lock.json version'
