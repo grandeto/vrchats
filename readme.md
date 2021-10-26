@@ -20,12 +20,12 @@ sudo tar -xJf node-$NODE_V-linux-x64.tar.xz -C /usr/local/lib/nodejs
 sudo chown -R root.root /usr/local/lib/nodejs
 sudo find /usr/local/lib/nodejs -type d -exec chmod 755 {} \;
 echo 'export PATH=$PATH:/usr/local/lib/nodejs/node-$NODE_V-linux-x64/bin' >> $HOME/.profile
+echo 'export PATH=$PATH:$HOME/.nodejs/node-$NODE_V-linux-x64/bin' >> $HOME/.profile
+source ~/.profile
 mkdir -p $HOME/.nodejs/node-$NODE_V-linux-x64
 npm config set prefix $HOME/.nodejs/node-$NODE_V-linux-x64
-echo 'export PATH=$PATH:$HOME/.nodejs/node-$NODE_V-linux-x64/bin' >> $HOME/.profile
-sudo rm /usr/local/lib/nodejs/node-$NODE_V-linux-x64/bin/np*
-source ~/.profile
 npm install -g npm
+sudo rm /usr/local/lib/nodejs/node-$NODE_V-linux-x64/bin/np*
 
 # /home/user install
 mkdir $HOME/.nodejs
