@@ -1,7 +1,7 @@
 on: push
 name: Bump package version
 jobs:
-  checkVersion:
+  bumpVersion:
     name: Bump package.json version
     outputs:
       new_sha: ${{ steps.sha.outputs.SHA }}
@@ -23,13 +23,14 @@ jobs:
           echo "::set-output name=SHA::$sha_new"
       - run:
           echo ${{ steps.sha.outputs.SHA }}
-  checkLockVersion:
+  bumpLockVersion:
     name: Bump package-lock.json version
     runs-on: ubuntu-latest
+    needs: bumpVersion
     steps:
       - uses: actions/checkout@v2
         with:
-          ref: ${{ needs.checkVersion.outputs.new_sha }}
+          ref: ${{ needs.bumpVersion.outputs.new_sha }}
           fetch-depth: 0
       - run:
           git log -5
