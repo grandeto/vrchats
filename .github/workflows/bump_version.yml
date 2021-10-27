@@ -1,0 +1,25 @@
+on: push
+name: Bump package version
+jobs:
+  bumpVersion:
+    name: Bump package.json version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Check branch name
+        id: check-branch-name
+        run: |
+          if [[ $(git rev-parse --abbrev-ref HEAD) =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo ::set-output name=branch_match::true
+          fi
+      - name: Bump package.json version
+        if: steps.check-branch-name.outputs.branch_match == 'true'
+        run: |
+          export APP_VERSION=$(git rev-parse --abbrev-ref HEAD)
+          sed -i -E "s/version\": \"(.*)\"/version\": \"${APP_VERSION:1}\"/"  package.json;
+          sed -i -E "0,/version\": \"(.*)\"/s//version\": \"${APP_VERSION:1}\"/"  package-lock.json;
+          git config --global user.name $(git log -1 --pretty=format:'%an')
+          git config --global user.email $(git log -1 --pretty=format:'%ae')
+          git commit -am "action: bump package.json and package-lock.json version"
+          git push
