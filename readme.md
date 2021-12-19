@@ -188,8 +188,34 @@ https://example.com:2053 - should return 200 OK
 https://example.com:8443 - should return 404 "Cannot GET /"
 ```
 
+# Applying changes
+
+- `pm2 ls && pm2 stop all && pm2 delete all`
+
+- repeat the following step
+
+```bash
+    - Start the app by (set the variable in the example according you needs)
+```
+
+- `pm2 save`
+
+- `sudo systemctl restart pm2-$USER`
+
+- `pm2 ls` - verify pm2 started successfuly the app instances with new pids
 
 # Troubleshooting and known issues
+
+- It seems `pm2 v5.1.2` has a nasty timezone behaviour, as seen from `.pm2/pm2.log`:
+
+    Here is an example from two sequent restarts of pm2-$USER service:
+    
+    - `2021-12-19T14:53:56: PM2 log: --- New PM2 Daemon started` - has the correct TZ in UTC
+    - `2021-12-19T18:24:12: PM2 log: --- New PM2 Daemon started` - the next one executed just after the previous one has started all of the nodes, shows an incorrect UTC TZ
+
+    Thus, auto refreshing of the `auth_token` become compromised and the simplest possible workaround is setting a root cron job to restart the `pm2-$USER` service daily at some time depending on your needs. For instance:
+
+    `0 0 * * * systemctl restart pm2-$USER` (replace $USER with the correct one for your system)
 
 - [pm2 docs - journalctl -u pm2-$USER.service](https://pm2.keymetrics.io/docs/usage/startup/)
 
