@@ -8,27 +8,6 @@ const io = require('socket.io-client'),
     channel = new BroadcastChannel(channelName),
     leaderElector = createLeaderElection(channel);
 
-const getCookie = function(cname) {
-        let name = cname + '=';
-        let ca = document.cookie.split(';');
-        for(let i = 0; i < ca.length; i++) {
-            let c = ca[i];
-            while (c.charAt(0) == ' ') {
-                c = c.substring(1);
-            }
-            if (c.indexOf(name) == 0) {
-                return c.substring(name.length, c.length);
-            }
-        }
-        return '';
-    },
-    setCookie = function(cname, cvalue, exdays) {
-        let d = new Date();
-        d.setTime(d.getTime() + (exdays * 24 * 60 * 60 * 1000));
-        let expires = 'expires='+d.toUTCString();
-        document.cookie = cname + '=' + cvalue + ';' + expires + ';path=/;Secure=true;SameSite=Lax';
-    };
-
 channel.onmessage = msg => {
     let newMsgsElement = msg.newMsgsElement,
         chatStreamElement = msg.chatStreamElement;
@@ -80,19 +59,6 @@ leaderElector.awaitLeadership().then(function () {
                 socket.on('connect_error', (err) => {
                     if (res.env == 'dev' || res.isAdmin) {
                         console.error(err.message);
-                    } else if (err.message == 'invalid token') {
-                        let chat_reload = getCookie('chat_reload');
-                        if (chat_reload == '' || +chat_reload < 6) {
-                            setCookie('chat_reload', +chat_reload+1, 1);
-                            setTimeout(function () {
-                                location.reload();
-                            }, 5000); // 5s
-                        } else {
-                            setTimeout(function () {
-                                setCookie('chat_reload', '', -1);
-                                location.reload();
-                            }, 600000); // 10m
-                        }
                     }
                 });
             }
