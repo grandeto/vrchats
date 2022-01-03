@@ -15,13 +15,6 @@ var getCookie = function(cname) {
     return "";
 }
 
-function setCookie(cname, cvalue, exdays) {
-    var d = new Date();
-    d.setTime(d.getTime() + (exdays * 24 * 60 * 60 * 1000));
-    var expires = "expires="+d.toUTCString();
-    document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/;Secure=true;SameSite=Lax";
-}
-
 var ioToken = function() {
     return getCookie('auth_token');
 };
@@ -32,6 +25,14 @@ var ioUserId = function() {
 
 var ioServer = function() {
     return getCookie('chat_server');
+}
+
+var ioEnv = function() {
+    return getCookie('io_env');
+}
+
+var ioIsAdmin = function() {
+    return getCookie('io_is_admin');
 }
 
 if (ioToken() != "" && ioUserId() != "" && ioServer() != "") {
@@ -53,20 +54,8 @@ if (ioToken() != "" && ioUserId() != "" && ioServer() != "") {
     });
 
     socket.on("connect_error", (err) => {
-        if (err.message === "invalid token") {
-            console.error('Invalid token');
-            var chat_reload = getCookie('chat_reload');
-            if (chat_reload == "" || +chat_reload < 6) {
-                setCookie('chat_reload', +chat_reload+1, 1);
-                setTimeout(function () {
-                    location.reload();
-                }, 5000);
-            } else {
-                setTimeout(function () {
-                    setCookie('chat_reload', "", -1);
-                    location.reload();
-                }, 600000);
-            }
+        if (ioEnv() == 'dev' || ioIsAdmin()) {
+            console.error(err.message);
         }
     });
 }
