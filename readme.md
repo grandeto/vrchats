@@ -262,4 +262,8 @@ net.ipv4.ip_local_port_range = 10000 65535
 
 - `npm run build:client:min`
 - create branch vX.X.X
-- open PR master <- vX.X.X
+- merge PR master <- vX.X.X
+- wait for github actions
+- draft new release -> create tag -> publish
+- npm login
+- npm publish --access public
