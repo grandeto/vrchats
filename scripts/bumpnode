@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+
+NODEV=$1
+NPMV=$2
+NPMDEFAULTV="latest"
+
+HELP="Use: bumpnode 8.17.0 6.13.4 \n where 8.17.0 is node js version \n and 6.13.4 is npm version"
+
+if [ -v $NPMV ]; then
+    NPMV=$NPMDEFAULTV
+fi
+
+if [[ $NODEV == "h" || $NODEV == "-h" || $NODEV == "help" ]]; then
+    echo -e $HELP
+    exit 0
+fi
+
+if [[ ! $NODEV =~ ^[0-9]+\.[0-9]+\.[0-9] ]]; then
+    echo -e $HELP
+    exit 1
+fi
+
+if [[ ! $NPMV =~ ^[0-9]+\.[0-9]+\.[0-9] && $NPMV != $NPMDEFAULTV ]]; then
+    echo -e $HELP
+    exit 1
+fi
+
+cd
+source ~/.profile
+
+NEW_VERSION_FILE="node-v$NODEV-linux-x64.tar.xz"
+NEW_VERSION_DIR="node-v$NODEV-linux-x64"
+HOME_DIR_NODE=$HOME/.nodejs
+NODE_INSTALL_DIR=/usr/local/lib/nodejs
+
+if [ ! -d $HOME_DIR_NODE ]; then
+    mkdir -p $HOME_DIR_NODE
+fi
+
+if [ ! -d $NODE_INSTALL_DIR ]; then
+    sudo mkdir -p $NODE_INSTALL_DIR
+fi
+
+if [ ! -f $NEW_VERSION_FILE ]; then
+    URL="https://nodejs.org/dist/v$NODEV/$NEW_VERSION_FILE"
+    
+    echo "downloading $NEW_VERSION_FILE"
+
+    wget $URL
+fi
+
+
+if [ -f $NEW_VERSION_FILE ]; then
+    echo "cleaning old node/npm installations"
+    sudo rm -rf $NODE_INSTALL_DIR/*
+    sudo rm -rf $HOME_DIR_NODE/*
+    sudo rm -rf $HOME/.npm
+    sudo rm $HOME/.npmrc
+
+    echo "installing nodejs $NODEV"
+    sudo tar -C $NODE_INSTALL_DIR -xJf $NEW_VERSION_FILE
+    sudo cp -R $NODE_INSTALL_DIR/$NEW_VERSION_DIR/* $NODE_INSTALL_DIR
+
+    sudo rm -rf $NODE_INSTALL_DIR/$NEW_VERSION_DIR
+    sudo find $NODE_INSTALL_DIR -type d -exec chmod 755 {} \;
+
+    echo "setting npm dir to $HOME_DIR_NODE"
+    npm config set prefix $HOME_DIR_NODE
+
+    echo "installing npm $NPMV"
+    npm install -g npm@$NPMV
+
+    sudo rm $NODE_INSTALL_DIR/bin/np*
+    
+    source ~/.profile
+
+    echo "installed node -v"
+    node -v
+    echo "installed npm -v"
+    npm -v
+
+    exit 0
+else
+    echo "ERROR: $NEW_VERSION_FILE not found"
+    exit 1
+fi
