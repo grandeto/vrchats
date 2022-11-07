@@ -8,43 +8,54 @@ Event-driven real-time chat processor based on Socket.io
 - npm 8.x
 
 
-```bash
-cd
-echo 'export NODE_V=v14.18.1' >> $HOME/.profile
-source ~/.profile
-wget https://nodejs.org/dist/$NODE_V/node-$NODE_V-linux-x64.tar.xz
-
-# /usr/local install
-sudo mkdir -p /usr/local/lib/nodejs
-sudo tar -xJf node-$NODE_V-linux-x64.tar.xz -C /usr/local/lib/nodejs
-sudo chown -R root.root /usr/local/lib/nodejs
-sudo find /usr/local/lib/nodejs -type d -exec chmod 755 {} \;
-echo 'export PATH=$PATH:/usr/local/lib/nodejs/node-$NODE_V-linux-x64/bin' >> $HOME/.profile
-echo 'export PATH=$PATH:$HOME/.nodejs/node-$NODE_V-linux-x64/bin' >> $HOME/.profile
-source ~/.profile
-mkdir -p $HOME/.nodejs/node-$NODE_V-linux-x64
-npm config set prefix $HOME/.nodejs/node-$NODE_V-linux-x64
-npm install -g npm
-sudo rm /usr/local/lib/nodejs/node-$NODE_V-linux-x64/bin/np*
-
-# /home/user install
-mkdir $HOME/.nodejs
-tar -xJf node-$NODE_V-linux-x64.tar.xz -C $HOME/.nodejs
-sudo chown -R $USER.$USER $HOME/.nodejs
-sudo find $HOME/.nodejs -type d -exec chmod 755 {} \;
-npm config set prefix $HOME/.nodejs/node-$NODE_V-linux-x64
-echo 'export PATH=$PATH:$HOME/.nodejs/node-$NODE_V-linux-x64/bin' >> $HOME/.profile
-source ~/.profile
-npm install -g npm
-
-reboot
-```
-
 # Features
 
 - Events listener HTTPS (Cluster mode supported)
 - Whitelisting origins, ip ranges, proxy ranges
 - Subscribers connection Auth, Rate Limiter
+
+# Init
+
+## Tune OS (Linux)
+
+```bash
+sudo nano /etc/security/limits.d/custom.conf
+
+root soft nofile 1000000
+root hard nofile 1000000
+* soft nofile 1000000
+* hard nofile 1000000
+```
+
+```bash
+sudo nano /etc/sysctl.conf
+
+fs.file-max = 1000000
+fs.nr_open = 1000000
+net.ipv4.netfilter.ip_conntrack_max = 1048576
+net.nf_conntrack_max = 1048576
+```
+
+```bash
+sudo nano /etc/sysctl.d/net.ipv4.ip_local_port_range.conf
+
+net.ipv4.ip_local_port_range = 10000 65535
+```
+
+## Env create (Linux)
+
+```bash
+cd
+echo 'export PATH=$PATH:/usr/local/lib/nodejs/bin' >> $HOME/.profile
+echo 'export PATH=$PATH:$HOME/.nodejs/bin' >> $HOME/.profile
+source ~/.profile
+
+# /usr/local install
+
+`./scripts/./bumpnode 14.18.1 8.19.3`
+
+reboot
+```
 
 # Start the app
 
@@ -192,12 +203,6 @@ https://example.com:8443 - should return 404 "Cannot GET /"
 
 - `pm2 ls && pm2 stop all && pm2 delete all`
 
-- repeat the following step
-
-```bash
-    - Start the app by (set the variable in the example according you needs)
-```
-
 - `pm2 save`
 
 - `sudo systemctl restart pm2-$USER`
@@ -232,36 +237,10 @@ cd $VRCHATS_DIR
 DEBUG=* CLUSTER_MODE=0 node --nouse-idle-notification --expose-gc --max-old-space-size=8192 --trace-sync-io app.js
 ```
 
-# Tune OS (Linux)
+# Release
 
-```bash
-sudo nano /etc/security/limits.d/custom.conf
-
-root soft nofile 1000000
-root hard nofile 1000000
-* soft nofile 1000000
-* hard nofile 1000000
-```
-
-```bash
-sudo nano /etc/sysctl.conf
-
-fs.file-max = 1000000
-fs.nr_open = 1000000
-net.ipv4.netfilter.ip_conntrack_max = 1048576
-net.nf_conntrack_max = 1048576
-```
-
-```bash
-sudo nano /etc/sysctl.d/net.ipv4.ip_local_port_range.conf
-
-net.ipv4.ip_local_port_range = 10000 65535
-```
-
-# Deployment
-
-- `npm run build:client:min`
 - create branch vX.X.X
+- `npm run build:client:min`
 - merge PR master <- vX.X.X
 - wait for github actions
 - draft new release -> create tag -> publish
