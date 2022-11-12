@@ -63,7 +63,7 @@ reboot
 sudo mkdir -p /var/www/vrchats
 sudo chown $USER.$USER /var/www/vrchats/
 cd /var/www/vrchats
-echo 'export VRCHATS_DIR=/var/www/vrchats ' >> $HOME/.profile
+echo 'export APP_DIR=/var/www/vrchats ' >> $HOME/.profile
 source ~/.profile
 git clone https://github.com/grandeto/vrchats.git .
 npm install
@@ -125,7 +125,7 @@ npm install -g @grandeto/pm2-socket.io
 - Start the app by (set the variable in the example according you needs)
 
 ```bash
-NODE_ENV="production" CLUSTER_MODE=1 CLUSTER_INSTANCES="-1" PRODUCER_PORT=2053 CONSUMER_PORT=8443 ALLOWED_ORIGINS="https://example.com" ALLOWED_IPS="123.123.123.123/32,127.0.0.1/32,::1/128" USE_PROXY=1 TRUST_PROXY="103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,104.16.0.0/13,104.24.0.0/14,108.162.192.0/18,131.0.72.0/22,141.101.64.0/18,162.158.0.0/15,172.64.0.0/13,173.245.48.0/20,188.114.96.0/20,190.93.240.0/20,197.234.240.0/22,198.41.128.0/17,2400:cb00::/32,2606:4700::/32,2803:f800::/32,2405:b500::/32,2405:8100::/32,2c0f:f248::/32,2a06:98c0::/29" PUB_KEY_PATH="$VRCHATS_DIR/pubkey.pem" PRIV_KEY_PATH="$VRCHATS_DIR/privkey.pem" CA_PATH="$VRCHATS_DIR/ca.pem" VERIFY_ORIGIN=1 IO_TOKEN_RENEW_START_HOUR=0 IO_TOKEN_RENEW_INTERVAL=86400000 LOGS_DIR="$VRCHATS_DIRlogs" AUTH_TOKEN_SECRET="some-nasty-secret" pm2 start $VRCHATS_DIR/cluster.config.js
+NODE_ENV="production" CLUSTER_MODE=1 CLUSTER_INSTANCES="-1" PRODUCER_PORT=2053 CONSUMER_PORT=8443 ALLOWED_ORIGINS="https://example.com" ALLOWED_IPS="123.123.123.123/32,127.0.0.1/32,::1/128" USE_PROXY=1 TRUST_PROXY="103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,104.16.0.0/13,104.24.0.0/14,108.162.192.0/18,131.0.72.0/22,141.101.64.0/18,162.158.0.0/15,172.64.0.0/13,173.245.48.0/20,188.114.96.0/20,190.93.240.0/20,197.234.240.0/22,198.41.128.0/17,2400:cb00::/32,2606:4700::/32,2803:f800::/32,2405:b500::/32,2405:8100::/32,2c0f:f248::/32,2a06:98c0::/29" PUB_KEY_PATH="$APP_DIR/certs/pubkey.pem" PRIV_KEY_PATH="$APP_DIR/certs/privkey.pem" CA_PATH="$APP_DIR/certs/ca.pem" VERIFY_ORIGIN=1 IO_TOKEN_RENEW_START_HOUR=0 IO_TOKEN_RENEW_INTERVAL=86400000 LOGS_DIR="$APP_DIR/logs" AUTH_TOKEN_SECRET="some-nasty-secret" pm2 start $APP_DIR/cluster.config.js
 ```
 
 - Test the app
@@ -231,7 +231,7 @@ https://example.com:8443 - should return 404 "Cannot GET /"
 Create `.env` file and populate the env variables found in `.env_example` into it
 
 ```bash
-cd $VRCHATS_DIR
+cd $APP_DIR
 DEBUG=* CLUSTER_MODE=0 node --nouse-idle-notification --expose-gc --max-old-space-size=8192 --trace-sync-io app.js
 ```
 
