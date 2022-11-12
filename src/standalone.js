@@ -1,11 +1,12 @@
 function standaloneInit() {
     const helpers = require('./helpers.js')
-    const logger = helpers.loggerInit()
+    const log = require('./log.js')
+    const logger = log.loggerInit()
     const { readFileSync } = require('fs')
     const { isIP, inRange } = require('range_check')
     var ioToken
 
-    logger.info('Standalone node init', helpers.loggerMetadata())
+    logger.info('Standalone node init', log.loggerMetadata())
 
     // rate limit
     const { RateLimiterMemory } = require('rate-limiter-flexible')
@@ -21,11 +22,11 @@ function standaloneInit() {
     // https server
     const { createServer } = require('https')
     var httpsOpts = {
-        key: readFileSync(process.env.PRIV_KEY_PATH),
-        cert: readFileSync(process.env.PUB_KEY_PATH)
+        key: readFileSync(helpers.privKeyPath()),
+        cert: readFileSync(helpers.pubKeyPath())
     }
     if (process.env.VERIFY_ORIGIN == 1) {
-        httpsOpts.ca = readFileSync(process.env.CA_PATH)
+        httpsOpts.ca = readFileSync(helpers.caPath())
         httpsOpts.requestCert = true
     }
     const httpsServer = createServer(httpsOpts, app)
@@ -82,18 +83,18 @@ function standaloneInit() {
             ip = req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for']
 
             if (!isIP(proxyIp) || !isIP(ip)) {
-                logger.error('invalid proxy_ip or ip', helpers.loggerMetadata(req))
+                logger.error('invalid proxy_ip or ip', log.loggerMetadata(req))
                 res.status(403).send('Forbidden')
             } else if (!inRange(proxyIp, trustProxy) || !inRange(ip, allowedIps)) {
                 // in case app is behind cloudflare, add cloudflare's ip ranges in .env TRUST_PROXY
-                logger.error('untrusted proxy_ip or ip', helpers.loggerMetadata(req))
+                logger.error('untrusted proxy_ip or ip', log.loggerMetadata(req))
                 res.status(403).send('Forbidden')
             } else {
                 next()
             }
         } else {
             if (!isIP(ip) || !inRange(ip, allowedIps)) {
-                logger.error('invalid or untrusted ip', helpers.loggerMetadata(req))
+                logger.error('invalid or untrusted ip', log.loggerMetadata(req))
                 res.status(403).send('Forbidden')
             } else {
                 next()
@@ -113,7 +114,7 @@ function standaloneInit() {
             delete req.body.uuid
             io.emit(to, req.body)
         } else {
-            logger.error('Invalid to.uuid', helpers.loggerMetadata(req, {
+            logger.error('Invalid to.uuid', log.loggerMetadata(req, {
                 toUiid: req.body.to.uuid,
                 fromId: req.body.from.id
             }))
@@ -124,7 +125,7 @@ function standaloneInit() {
 
     // API error handler
     app.use((err, req, res, next) => {
-        logger.error('req/res error', helpers.loggerMetadata(req, {stack: err.stack}))
+        logger.error('req/res error', log.loggerMetadata(req, {stack: err.stack}))
         res.status(500).send('ISE')
     })
 
@@ -142,17 +143,17 @@ function standaloneInit() {
                                 })
 
         if (hasToBeLimited) {
-            logger.error('rate limit block', helpers.loggerMetadata(socket.handshake, {uniqueUserId: socket.handshake.query.uniqueUserId}))
+            logger.error('rate limit block', log.loggerMetadata(socket.handshake, {uniqueUserId: socket.handshake.query.uniqueUserId}))
             next(new Error('rate limit block'))
         } else if (socket.handshake.auth.token != ioToken) {
-            logger.error('auth token error', helpers.loggerMetadata(socket.handshake, {
+            logger.error('auth token error', log.loggerMetadata(socket.handshake, {
                 token: ioToken,
                 tokenReceived: socket.handshake.auth.token,
                 uniqueUserId: socket.handshake.query.uniqueUserId
             }))
             next(new Error('invalid token'))
         } else {
-            logger.info('connected', helpers.loggerMetadata(socket.handshake, {
+            logger.info('connected', log.loggerMetadata(socket.handshake, {
                 origin: socket.handshake.headers.origin,
                 uniqueUserId: socket.handshake.query.uniqueUserId
             }))
@@ -163,7 +164,7 @@ function standaloneInit() {
     // init //
 
     httpsServer.listen(+process.env.STANDALONE_PORT || 8443, () => {
-        logger.info('Listening...' + process.env.STANDALONE_PORT, helpers.loggerMetadata())
+        logger.info('Listening...' + process.env.STANDALONE_PORT, log.loggerMetadata())
     })
 
     setInterval(function() {
@@ -172,7 +173,7 @@ function standaloneInit() {
                 global.gc()
             }
         } catch (e) {
-            logger.error('global.gc error', helpers.loggerMetadata())
+            logger.error('global.gc error', log.loggerMetadata())
             process.exit()
         }
     }, 30000)

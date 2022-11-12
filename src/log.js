@@ -1,4 +1,4 @@
-const SHA512 = require('crypto-js/sha512')
+const path = require('path');
 
 function loggerInit() {
     const { createLogger, transports, format } = require('winston')
@@ -26,21 +26,6 @@ function loggerInit() {
     }
 
     return logger
-}
-
-function fetchV4Ip(ip) {
-    return ip.substr(0, 7) == '::ffff:' ? ip.substr(7) : ip
-}
-
-function allowedOrigins() {
-    return process.env.ALLOWED_ORIGINS.split(',')
-}
-
-function ioTokenHash() {
-    let date = new Date()
-    date = date.getUTCFullYear() + '-' + (date.getUTCMonth()+1)  + '-' + date.getUTCDate()
-
-    return SHA512(process.env.AUTH_TOKEN_SECRET + date).toString()
 }
 
 function loggerMetadata(req = undefined, data = {}) {
@@ -76,7 +61,7 @@ function loggerMetadata(req = undefined, data = {}) {
 
 function fileTransportLogsOpts(name, opts = {}) {
     return Object.assign({
-            dirname: process.env.LOGS_DIR,
+            dirname: path.normalize(process.env.LOGS_DIR),
             filename: name + '-%DATE%.log',
             datePattern: 'YYYY-MM-DD',
             zippedArchive: true,
@@ -87,8 +72,5 @@ function fileTransportLogsOpts(name, opts = {}) {
 
 module.exports = {
     loggerMetadata,
-    ioTokenHash,
-    allowedOrigins,
-    fetchV4Ip,
     loggerInit
 }
