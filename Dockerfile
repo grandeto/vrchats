@@ -21,30 +21,6 @@ Run apt-get install -y wget ca-certificates apt-transport-https locales && rm -r
 
 ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
 
-# Tune OS
-ARG LIMITS_CONF=/etc/security/limits.d/custom.conf
-RUN if [ ! -f $LIMITS_CONF ]; then \
-        touch $LIMITS_CONF; \
-    fi; \
-    \
-    echo "root soft nofile 1000000" >> $LIMITS_CONF \
-    && echo "root hard nofile 1000000" >> $LIMITS_CONF \
-    && echo "* soft nofile 1000000" >> $LIMITS_CONF \
-    && echo "* hard nofile 1000000" >> $LIMITS_CONF
-
-ARG SYSCTL_CONF=/etc/sysctl.conf
-RUN echo "fs.file-max = 1000000" >> $SYSCTL_CONF \
-    && echo "fs.nr_open = 1000000" >> $SYSCTL_CONF \
-    && echo "net.ipv4.netfilter.ip_conntrack_max = 1048576" >> $SYSCTL_CONF \
-    && echo "net.nf_conntrack_max = 1048576" >> $SYSCTL_CONF
-
-ARG IP_LOCAL_PORT_RANGE_CONF=/etc/sysctl.d/net.ipv4.ip_local_port_range.conf
-RUN if [ ! -f $IP_LOCAL_PORT_RANGE_CONF ]; then \
-        touch $IP_LOCAL_PORT_RANGE_CONF; \
-    fi; \
-    \
-    echo "net.ipv4.ip_local_port_range = 10000 65535" >> $IP_LOCAL_PORT_RANGE_CONF
-
 # Install Nodejs
 ARG NODE_VERSION
 ARG NPM_VERSION
@@ -61,39 +37,41 @@ RUN if [ -z $NODE_VERSION ] || [[ ! $NODE_VERSION =~ ^[0-9]+\.[0-9]+\.[0-9] ]]; 
         exit 1; \
     fi;
 
-ARG NEW_VERSION_FILE="node-v$NODE_VERSION-linux-x64.tar.gz"
-ARG NEW_VERSION_DIR="node-v$NODE_VERSION-linux-x64"
-ARG HOME_DIR_NODE=.nodejs
-ARG NODE_INSTALL_DIR=/usr/local/lib/nodejs
+ARG NEW_NODE_ARCHIVE="node-v$NODE_VERSION-linux-x64.tar.gz"
+ARG NEW_NODE_EXTRACTED_DIR="node-v$NODE_VERSION-linux-x64"
 
-RUN if [ ! -d $HOME_DIR_NODE ]; then \
-        mkdir -p $HOME_DIR_NODE; \
+ARG NODE_INSTALL_DIR=/usr/local/lib/nodejs
+ARG NPM_INSTALL_DIR=.nodejs
+
+RUN if [ ! -d $NODE_INSTALL_DIR ]; then \
+        mkdir -p $NODE_INSTALL_DIR; \
     fi; \
     \
-    if [ ! -d $NODE_INSTALL_DIR ]; then \
-        mkdir -p $NODE_INSTALL_DIR; \
+    if [ ! -d $NPM_INSTALL_DIR ]; then \
+        mkdir -p $NPM_INSTALL_DIR; \
     fi;
+    
 
-RUN wget "https://nodejs.org/dist/v$NODE_VERSION/$NEW_VERSION_FILE"
+RUN wget "https://nodejs.org/dist/v$NODE_VERSION/$NEW_NODE_ARCHIVE"
 
-RUN if [ ! -f $NEW_VERSION_FILE ]; then \
-        echo "ERROR: $NEW_VERSION_FILE not found"; \
+RUN if [ ! -f $NEW_NODE_ARCHIVE ]; then \
+        echo "ERROR: $NEW_NODE_ARCHIVE not found"; \
         exit 1; \
     fi;
 
 RUN rm -rf $NODE_INSTALL_DIR/* \
-    && rm -rf $HOME_DIR_NODE/* \
+    && rm -rf $NPM_INSTALL_DIR/* \
     && rm -rf $HOME/.npm
 
-RUN tar -xvf $NEW_VERSION_FILE --directory $NODE_INSTALL_DIR \
-    && cp -R $NODE_INSTALL_DIR/$NEW_VERSION_DIR/* $NODE_INSTALL_DIR \
-    && rm -rf $NODE_INSTALL_DIR/$NEW_VERSION_DIR
+RUN tar -xvf $NEW_NODE_ARCHIVE --directory $NODE_INSTALL_DIR \
+    && cp -R $NODE_INSTALL_DIR/$NEW_NODE_EXTRACTED_DIR/* $NODE_INSTALL_DIR \
+    && rm -rf $NODE_INSTALL_DIR/$NEW_NODE_EXTRACTED_DIR
 
-RUN npm config set prefix $HOME_DIR_NODE \
+RUN npm config set prefix $NPM_INSTALL_DIR \
     && npm install -g npm@$NPM_VERSION \
     && rm $NODE_INSTALL_DIR/bin/np*
 
-# Install pm2
+# Install @grandeto/pm2-socket.io
 RUN npm remove -g pm2
 RUN npm install -g @grandeto/pm2-socket.io
 
@@ -115,13 +93,6 @@ ADD docker-entrypoint.sh /usr/local/bin/
 RUN chmod 600 $APP_DIR/.env
 RUN chmod 600 $APP_DIR/certs/*.pem
 RUN cd $APP_DIR && npm install
-
-ENV PRODUCER_PORT=2053
-ENV CONSUMER_PORT=8443
-ENV STANDALONE_PORT=8443
-
-EXPOSE 2053
-EXPOSE 8443
 
 ENTRYPOINT ["docker-entrypoint.sh"]
 
