@@ -307,7 +307,7 @@ DEBUG=* CLUSTER_MODE=0 node --nouse-idle-notification --expose-gc --max-old-spac
 
 - create branch vX.X.X
 - `npm run build:client:min`
-- merge PR master <- vX.X.X
+- open & merge PR `master <- vX.X.X`
 - wait for github actions
 - draft new release -> create tag -> publish
 - npm login
