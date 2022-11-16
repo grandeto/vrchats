@@ -1,7 +1,11 @@
+const path = require('path');
+
+const app = path.join(path.normalize(process.env.APP_DIR), "./app.js")
+
 module.exports = {
     apps: [{
-        name: "vrchatsc",
-        script: "./app.js",
+        name: "vrchats_cluster",
+        script: app,
         instances: process.env.CLUSTER_INSTANCES,
         exec_mode: "cluster",
         exp_backoff_restart_delay: 500,

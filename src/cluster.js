@@ -1,9 +1,10 @@
 const helpers = require('./helpers.js')
-const logger = helpers.loggerInit()
+const log = require('./log.js')
+const logger = log.loggerInit()
 const { readFileSync } = require('fs')
 var ioToken
 
-logger.info('Cluster node init', helpers.loggerMetadata())
+logger.info('Cluster node init', log.loggerMetadata())
 
 // express
 const express = require('express')
@@ -12,11 +13,11 @@ const app = express()
 // https server
 const { createServer } = require('https')
 let httpsOpts = {
-    key: readFileSync(process.env.PRIV_KEY_PATH),
-    cert: readFileSync(process.env.PUB_KEY_PATH)
+    key: readFileSync(helpers.privKeyPath()),
+    cert: readFileSync(helpers.pubKeyPath())
 }
 if (process.env.VERIFY_ORIGIN == 1) {
-    httpsOpts.ca = readFileSync(process.env.CA_PATH)
+    httpsOpts.ca = readFileSync(helpers.caPath())
     httpsOpts.requestCert = true
 }
 const httpsServer = createServer(httpsOpts, app)
@@ -29,7 +30,7 @@ if (process.env.USE_PROXY == 1) {
 
 // events API
 function socketProducerInit() {
-    logger.info('socketProducer init', helpers.loggerMetadata())
+    logger.info('socketProducer init', log.loggerMetadata())
 
     const { isIP, inRange } = require('range_check')
 
@@ -40,7 +41,7 @@ function socketProducerInit() {
                 global.gc()
             }
         } catch (e) {
-            logger.error('global.gc error', helpers.loggerMetadata())
+            logger.error('global.gc error', log.loggerMetadata())
             process.exit()
         }
     }, 30000)
@@ -56,18 +57,18 @@ function socketProducerInit() {
             ip = req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for']
 
             if (!isIP(proxyIp) || !isIP(ip)) {
-                logger.error('invalid proxy_ip or ip', helpers.loggerMetadata(req))
+                logger.error('invalid proxy_ip or ip', log.loggerMetadata(req))
                 res.status(403).send('Forbidden')
             } else if (!inRange(proxyIp, trustProxy) || !inRange(ip, allowedIps)) {
                 // in case app is behind cloudflare, add cloudflare's ip ranges in .env TRUST_PROXY
-                logger.error('untrusted proxy_ip or ip', helpers.loggerMetadata(req))
+                logger.error('untrusted proxy_ip or ip', log.loggerMetadata(req))
                 res.status(403).send('Forbidden')
             } else {
                 next()
             }
         } else {
             if (!isIP(ip) || !inRange(ip, allowedIps)) {
-                logger.error('invalid or untrusted ip', helpers.loggerMetadata(req))
+                logger.error('invalid or untrusted ip', log.loggerMetadata(req))
                 res.status(403).send('Forbidden')
             } else {
                 next()
@@ -79,7 +80,7 @@ function socketProducerInit() {
 
     // API monitoring
     app.get('/', (req, res) => {
-        logger.info("GET", helpers.loggerMetadata(req))
+        logger.info("GET", log.loggerMetadata(req))
         res.status(200).send('OK')
     })
 
@@ -91,7 +92,7 @@ function socketProducerInit() {
                 data : req.body
             })
         } else {
-            logger.error('Invalid to.uuid', helpers.loggerMetadata(req, {
+            logger.error('Invalid to.uuid', log.loggerMetadata(req, {
                 toUiid: req.body.to.uuid,
                 fromId: req.body.from.id
             }))
@@ -102,21 +103,21 @@ function socketProducerInit() {
 
     // handle errors
     app.use((err, req, res, next) => {
-        logger.error('req/res error', helpers.loggerMetadata(req, {stack: err.stack}))
+        logger.error('req/res error', log.loggerMetadata(req, {stack: err.stack}))
         res.status(500).send('ISE')
     })
 
     // producers listening
     httpsServer.listen(+process.env.PRODUCER_PORT || 2053, () => {
-        logger.info('Listening...' + process.env.PRODUCER_PORT, helpers.loggerMetadata())
+        logger.info('Listening...' + process.env.PRODUCER_PORT, log.loggerMetadata())
     })
 
-    logger.info('socketProducer initialized', helpers.loggerMetadata())
+    logger.info('socketProducer initialized', log.loggerMetadata())
 }
 
 // subscribers endpoint
 function socketConsumerInit(msgBuss) {
-    logger.info('socketConsumer init', helpers.loggerMetadata())
+    logger.info('socketConsumer init', log.loggerMetadata())
 
     // socket.io auth token bootstrap
     ioToken = helpers.ioTokenHash()
@@ -168,17 +169,17 @@ function socketConsumerInit(msgBuss) {
                                 })
 
         if (hasToBeLimited) {
-            logger.error('rate limit block', helpers.loggerMetadata(socket.handshake, {uniqueUserId: socket.handshake.query.uniqueUserId}))
+            logger.error('rate limit block', log.loggerMetadata(socket.handshake, {uniqueUserId: socket.handshake.query.uniqueUserId}))
             next(new Error('rate limit block'))
         } else if (socket.handshake.auth.token != ioToken) {
-            logger.error('auth token error', helpers.loggerMetadata(socket.handshake, {
+            logger.error('auth token error', log.loggerMetadata(socket.handshake, {
                 token: ioToken,
                 tokenReceived: socket.handshake.auth.token,
                 uniqueUserId: socket.handshake.query.uniqueUserId
             }))
             next(new Error('invalid token'))
         } else {
-            logger.info('connected', helpers.loggerMetadata(socket.handshake, {
+            logger.info('connected', log.loggerMetadata(socket.handshake, {
                 origin: socket.handshake.headers.origin,
                 uniqueUserId: socket.handshake.query.uniqueUserId
             }))
@@ -188,7 +189,7 @@ function socketConsumerInit(msgBuss) {
 
     // consumers listening
     httpsServer.listen(+process.env.CONSUMER_PORT || 8443, () => {
-        logger.info('Listening...' + process.env.CONSUMER_PORT, helpers.loggerMetadata())
+        logger.info('Listening...' + process.env.CONSUMER_PORT, log.loggerMetadata())
     })
 
     // msg emitter
@@ -198,7 +199,7 @@ function socketConsumerInit(msgBuss) {
         io.emit(to, packet.data)
     })
 
-    logger.info('socketConsumer initialized', helpers.loggerMetadata())
+    logger.info('socketConsumer initialized', log.loggerMetadata())
 }
 
 module.exports = {
