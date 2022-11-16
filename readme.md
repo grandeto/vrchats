@@ -14,7 +14,7 @@ Event-driven real-time chat processor based on Socket.io
 - Whitelisting origins, ip ranges, proxy ranges
 - Subscribers connection Auth, Rate Limiter
 
-# Init
+# Environment
 
 ## Tune OS (Linux)
 
@@ -42,22 +42,73 @@ sudo nano /etc/sysctl.d/net.ipv4.ip_local_port_range.conf
 net.ipv4.ip_local_port_range = 10000 65535
 ```
 
-## Env create (Linux)
+- Logout
+
+- Check your `ulimits` and tune whatever else needed
 
 ```bash
-cd
-echo 'export PATH=$PATH:/usr/local/lib/nodejs/bin' >> $HOME/.profile
-echo 'export PATH=$PATH:$HOME/.nodejs/bin' >> $HOME/.profile
-source ~/.profile
-
-# /usr/local install
-
-`./scripts/./bumpnode 14.18.1 8.19.3`
-
-reboot
+ulimit -Sa && echo -e "\n" && ulimit -Ha
 ```
 
-# Start the app
+## Env create (Docker)
+
+- Install docker
+
+- Clone repo
+
+```bash
+sudo mkdir -p /var/www/vrchats
+sudo chown $USER.$USER /var/www/vrchats/
+cd /var/www/vrchats
+git clone https://github.com/grandeto/vrchats.git .
+touch .env
+```
+
+- Populate `.env` file according to the `.env_example`
+
+```bash
+chmod 600 .env
+```
+
+- Add `pubkey.pem`, `privkey.pem`, `ca.pem`
+
+```bash
+chmod 600 *.pem
+```
+
+- Whitelist the defined in `.env` ports in your firewall
+
+- Build an image
+
+```bash
+docker build --build-arg NODE_VERSION=14.18.1 --build-arg NPM_VERSION=8.1.1 -t "vrchats" .
+```
+
+- Run the image in container (set --cpus, --memory and ports depending on your configuration)
+
+prod:
+
+```bash
+docker run -d --name vrchats --restart always --cpus="3" --memory=15500mb -p 8443:8443 -p 2053:2053 vrchats
+```
+
+local:
+
+```bash
+docker run --name vrchats --cpus="1" --memory=1gb -p 8443:8443 -p 2053:2053 vrchats
+```
+
+- Attach to the container, check `ulimits` and tune whatever needed
+
+```bash
+docker exec -it vrchats /bin/bash
+
+ulimit -Sa && echo -e "\n" && ulimit -Ha
+```
+
+## Env create (Linux)
+
+- Clone repo
 
 ```bash
 sudo mkdir -p /var/www/vrchats
@@ -84,17 +135,34 @@ chmod 600 *.pem
 
 - Whitelist defined ports in .env in your firewall
 
-## Standalone mode with HTTPS support (Single threaded)
+- Install nodejs & npm
+
+```bash
+cd
+echo 'export PATH=$PATH:/usr/local/lib/nodejs/bin' >> $HOME/.profile
+echo 'export PATH=$PATH:$HOME/.nodejs/bin' >> $HOME/.profile
+source ~/.profile
+
+# /usr/local install
+
+cd /var/www/vrchats
+
+./scripts/./bumpnode 14.18.1 8.19.3
+
+reboot
+```
+
+### Standalone mode with HTTPS support (Single threaded)
 
 ```bash
 npm install -g pm2 && \
 pm2 start /var/www/vrchats/standalone.config.js
 ```
 
-## Cluster mode with HTTPS support (Multi threaded)
+### Cluster mode with HTTPS support (Multi threaded)
 
 
-### Note: This is actually a partial cluster single node implementation
+#### Note: This is actually a partial cluster single node implementation
 
 
 It depends on [@grandeto/pm2-socket.io](https://github.com/grandeto/pm2) that can be used as a drop-in replacement for `pm2`, and supports all the commands of the class `pm2` utility
@@ -197,7 +265,7 @@ https://example.com:2053 - should return 200 OK
 https://example.com:8443 - should return 404 "Cannot GET /"
 ```
 
-# Applying changes
+### Applying changes
 
 - `pm2 ls && pm2 stop all && pm2 delete all`
 
@@ -206,6 +274,15 @@ https://example.com:8443 - should return 404 "Cannot GET /"
 - `sudo systemctl restart pm2-$USER`
 
 - `pm2 ls` - verify pm2 started successfuly the app instances with new pids
+
+### Start locally in debug mode
+
+Create `.env` file and populate the env variables found in `.env_example` into it
+
+```bash
+cd $APP_DIR
+DEBUG=* CLUSTER_MODE=0 node --nouse-idle-notification --expose-gc --max-old-space-size=8192 --trace-sync-io app.js
+```
 
 # Troubleshooting and known issues
 
@@ -225,15 +302,6 @@ https://example.com:8443 - should return 404 "Cannot GET /"
 - [stackoverflow 43786412](https://stackoverflow.com/questions/43786412/get-message-spawning-pm2-daemon-with-pm2-home-home-dir-pm2-always/69510630#69510630)
 
 - If your home directory is encrypted in order to demonize with `pm2 startup` all the node.js, npm and app raleted files should be outside of the home dir or try [link1](https://bbs.archlinux.org/viewtopic.php?id=201781) [link2](https://superuser.com/questions/1037466/how-to-start-a-systemd-service-after-user-login-and-stop-it-before-user-logout) [link3](https://bbs.archlinux.org/viewtopic.php?id=244264)
-
-# Start locally in debug mode
-
-Create `.env` file and populate the env variables found in `.env_example` into it
-
-```bash
-cd $APP_DIR
-DEBUG=* CLUSTER_MODE=0 node --nouse-idle-notification --expose-gc --max-old-space-size=8192 --trace-sync-io app.js
-```
 
 # Release
 
