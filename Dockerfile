@@ -14,8 +14,8 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
     && apt-get upgrade -y \
     && apt-get autoremove -y \
-    && apt-get install -y apt-utils 
-    
+    && apt-get install -y apt-utils
+
 Run apt-get install -y wget ca-certificates apt-transport-https locales && rm -rf /var/lib/apt/lists/* \
 	&& localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
 
@@ -50,7 +50,7 @@ RUN if [ ! -d $NODE_INSTALL_DIR ]; then \
     if [ ! -d $NPM_INSTALL_DIR ]; then \
         mkdir -p $NPM_INSTALL_DIR; \
     fi;
-    
+
 
 RUN wget "https://nodejs.org/dist/v$NODE_VERSION/$NEW_NODE_ARCHIVE"
 
@@ -71,9 +71,8 @@ RUN npm config set prefix $NPM_INSTALL_DIR \
     && npm install -g npm@$NPM_VERSION \
     && rm $NODE_INSTALL_DIR/bin/np*
 
-# Install @grandeto/pm2-socket.io
-RUN npm remove -g pm2
-RUN npm install -g @grandeto/pm2-socket.io
+# Install pm2
+RUN npm install -g pm2
 
 # Install app
 ENV APP_DIR=/var/www/vrchats
@@ -82,13 +81,13 @@ RUN if [ ! -d $APP_DIR ]; then \
         mkdir -p $APP_DIR; \
     fi;
 
-ADD certs $APP_DIR/certs/
-ADD logs $APP_DIR/logs/
-ADD src $APP_DIR/src/
-ADD *.js $APP_DIR/
-ADD *.json $APP_DIR/
-ADD .env $APP_DIR/
-ADD docker-entrypoint.sh /usr/local/bin/
+COPY certs $APP_DIR/certs/
+COPY logs $APP_DIR/logs/
+COPY src $APP_DIR/src/
+COPY *.js $APP_DIR/
+COPY *.json $APP_DIR/
+COPY .env $APP_DIR/
+COPY docker-entrypoint.sh /usr/local/bin/
 
 RUN chmod 600 $APP_DIR/.env
 RUN chmod 600 $APP_DIR/certs/*.pem
@@ -96,4 +95,4 @@ RUN cd $APP_DIR && npm install
 
 ENTRYPOINT ["docker-entrypoint.sh"]
 
-CMD ["/bin/bash", "-c", "pm2-runtime $APP_DIR/$APP_MODE.config.js"]
+CMD ["/bin/bash", "-c", "pm2-runtime $APP_DIR/app.config.js"]
