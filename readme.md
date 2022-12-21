@@ -1,6 +1,6 @@
 # Description
 
-Event-driven real-time chat processor based on Socket.io
+Event-driven HTTP/WebSocket real-time chat processor based on Socket.io
 
 # Requirements
 
@@ -10,9 +10,11 @@ Event-driven real-time chat processor based on Socket.io
 
 # Features
 
-- Events listener HTTPS (Cluster mode supported)
-- Whitelisting origins, ip ranges, proxy ranges
-- Subscribers connection Auth, Rate Limiter
+- HTTP events handler
+- WebSocket broadcast emitter
+- Whitelisting: Origin, IP ranges, PROXY ranges
+- Subscribers: WebSocket Auth, Rate Limiter
+- Front-end client
 
 # Environment
 
@@ -54,29 +56,25 @@ ulimit -Sa && echo -e "\n" && ulimit -Ha
 
 - Install docker
 
-- Clone repo
+- Clone the source
 
 ```bash
-sudo mkdir -p /var/www/vrchats
-sudo chown $USER.$USER /var/www/vrchats/
-cd /var/www/vrchats
 git clone https://github.com/grandeto/vrchats.git .
-touch .env
 ```
 
-- Populate `.env` file according to the `.env_example`
+- Create an `.env` file following the `.env_example`
 
 ```bash
 chmod 600 .env
 ```
 
-- Add `pubkey.pem`, `privkey.pem`, `ca.pem`
+- Add `pubkey.pem`, `privkey.pem`, `ca.pem` into `./certs`
 
 ```bash
-chmod 600 *.pem
+chmod 600 ./certs/*.pem
 ```
 
-- Whitelist the defined in `.env` ports in your firewall
+- Whitelist `.env` defined ports in your firewall
 
 - Build an image
 
@@ -95,7 +93,7 @@ docker run -d --name vrchats --restart always --cpus="3" --memory=15500mb -p 844
 local:
 
 ```bash
-docker run --name vrchats --cpus="1" --memory=1gb -p 8443:8443 -p 2053:2053 vrchats
+docker run --name vrchats -p 8443:8443 -p 2053:2053 vrchats
 ```
 
 - Attach to the container, check `ulimits` and tune whatever needed
@@ -106,111 +104,23 @@ docker exec -it vrchats /bin/bash
 ulimit -Sa && echo -e "\n" && ulimit -Ha
 ```
 
-## Env create (Linux)
-
-- Clone repo
-
-```bash
-sudo mkdir -p /var/www/vrchats
-sudo chown $USER.$USER /var/www/vrchats/
-cd /var/www/vrchats
-echo 'export APP_DIR=/var/www/vrchats ' >> $HOME/.profile
-source ~/.profile
-git clone https://github.com/grandeto/vrchats.git .
-npm install
-touch .env
-```
-
-- Populate `.env` file following the env variables in `.env_example`
-
-```bash
-chmod 600 .env
-```
-
-- Add `pubkey.pem`, `privkey.pem`, `ca.pem`
-
-```bash
-chmod 600 *.pem
-```
-
-- Whitelist defined ports in .env in your firewall
-
-- Install nodejs & npm
-
-```bash
-cd
-echo 'export PATH=$PATH:/usr/local/lib/nodejs/bin' >> $HOME/.profile
-echo 'export PATH=$PATH:$HOME/.nodejs/bin' >> $HOME/.profile
-source ~/.profile
-
-# /usr/local install
-
-cd /var/www/vrchats
-
-./scripts/./bumpnode 14.18.1 8.19.3
-
-reboot
-```
-
-### Standalone mode with HTTPS support (Single threaded)
-
-```bash
-npm install -g pm2 && \
-pm2 start /var/www/vrchats/standalone.config.js
-```
-
-### Cluster mode with HTTPS support (Multi threaded)
-
-
-#### Note: This is actually a partial cluster single node implementation
-
-
-It depends on [@grandeto/pm2-socket.io](https://github.com/grandeto/pm2) that can be used as a drop-in replacement for `pm2`, and supports all the commands of the class `pm2` utility
-
-The only difference comes from [grandeto commits](https://github.com/grandeto/pm2/commits/5.1.2-grandeto-socket.io?author=grandeto)
-
-The `pm2` God process now creates its own HTTPS express socket.io server instance that handles the socket.io consumers' connections and push the events from the socket.io event producers to them
-
-At the same time `pm2` will bootstrap as many `@grandeto/vrchats producers` as defined in `CLUSTER_INSTANCES` env variable
-
-The so called producers are express instances that expose a simple HTTPS API and listen for incoming events and emit them to the initiated by `pm2` God process socket.io server. 
-The producers are socket.io agnostic and could be used from any backend by just sending a POST request containing the event
-
-The initiated by `pm2` God process socket.io server is not spread to all of the threads thus this cluster mode actually act as partially clusterized
-
-- If `pm2` is already installed, you will have to remove it first:
-
-```bash
-npm remove -g pm2
-```
-
-- then install `@grandeto/pm2-socket.io`
-
-```bash
-npm install -g @grandeto/pm2-socket.io
-```
-
-- Start the app by (set the variable in the example according you needs)
-
-```bash
-NODE_ENV="production" CLUSTER_MODE=1 CLUSTER_INSTANCES="-1" PRODUCER_PORT=2053 CONSUMER_PORT=8443 ALLOWED_ORIGINS="https://example.com" ALLOWED_IPS="123.123.123.123/32,127.0.0.1/32,::1/128" USE_PROXY=1 TRUST_PROXY="103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,104.16.0.0/13,104.24.0.0/14,108.162.192.0/18,131.0.72.0/22,141.101.64.0/18,162.158.0.0/15,172.64.0.0/13,173.245.48.0/20,188.114.96.0/20,190.93.240.0/20,197.234.240.0/22,198.41.128.0/17,2400:cb00::/32,2606:4700::/32,2803:f800::/32,2405:b500::/32,2405:8100::/32,2c0f:f248::/32,2a06:98c0::/29" PUB_KEY_PATH="$APP_DIR/certs/pubkey.pem" PRIV_KEY_PATH="$APP_DIR/certs/privkey.pem" CA_PATH="$APP_DIR/certs/ca.pem" VERIFY_ORIGIN=1 IO_TOKEN_RENEW_START_HOUR=0 IO_TOKEN_RENEW_INTERVAL=86400000 LOGS_DIR="$APP_DIR/logs" AUTH_TOKEN_SECRET="some-nasty-secret" pm2 start $APP_DIR/cluster.config.js
-```
-
-- Test the app
+- Test the service
 
 ```
-https://example.com:2053 - should return 200 OK
+https://example.com:2053/status - should return 200 OK
 
 https://example.com:8443 - should return 404 "Cannot GET /"
 ```
 
-- Save the pm2 app settings
+# pm2 how-to
+
+- Save pm2 settings
 
 ```bash
 pm2 save
 ```
 
-- Create pm2 startup deamon
+- pm2 deamon
 
 ```bash
 pm2 startup
@@ -259,13 +169,9 @@ Environment=AUTH_TOKEN_SECRET="some-nasty-secret"
 
 ```
 pm2 ls - should display list of running instances having status online
-
-https://example.com:2053 - should return 200 OK
-
-https://example.com:8443 - should return 404 "Cannot GET /"
 ```
 
-### Applying changes
+## pm2 applying changes
 
 - `pm2 ls && pm2 stop all && pm2 delete all`
 
@@ -275,18 +181,9 @@ https://example.com:8443 - should return 404 "Cannot GET /"
 
 - `pm2 ls` - verify pm2 started successfuly the app instances with new pids
 
-### Start locally in debug mode
+## pm2 knows issues
 
-Create `.env` file and populate the env variables found in `.env_example` into it
-
-```bash
-cd $APP_DIR
-DEBUG=* CLUSTER_MODE=0 node --nouse-idle-notification --expose-gc --max-old-space-size=8192 --trace-sync-io app.js
-```
-
-# Troubleshooting and known issues
-
-- It seems `pm2 v5.1.2` has a nasty timezone behaviour, as seen from `.pm2/pm2.log`:
+- It seems `pm2 v5.1.2` has a weird timezone behaviour, as seen from `.pm2/pm2.log`:
 
     An example from sequent restarts of pm2-$USER service:
     
@@ -302,6 +199,15 @@ DEBUG=* CLUSTER_MODE=0 node --nouse-idle-notification --expose-gc --max-old-spac
 - [stackoverflow 43786412](https://stackoverflow.com/questions/43786412/get-message-spawning-pm2-daemon-with-pm2-home-home-dir-pm2-always/69510630#69510630)
 
 - If your home directory is encrypted in order to demonize with `pm2 startup` all the node.js, npm and app raleted files should be outside of the home dir or try [link1](https://bbs.archlinux.org/viewtopic.php?id=201781) [link2](https://superuser.com/questions/1037466/how-to-start-a-systemd-service-after-user-login-and-stop-it-before-user-logout) [link3](https://bbs.archlinux.org/viewtopic.php?id=244264)
+
+
+# Troubleshooting and known issues
+
+## Running in debug mode
+
+```bash
+DEBUG=* node --nouse-idle-notification --expose-gc --max-old-space-size=8192 --trace-sync-io app.js
+```
 
 # Release
 

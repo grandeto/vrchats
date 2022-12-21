@@ -1,6 +1,6 @@
 const path = require('path');
 
-function loggerInit() {
+function init() {
     const { createLogger, transports, format } = require('winston')
     require('winston-daily-rotate-file')
     const logger = createLogger({
@@ -28,7 +28,7 @@ function loggerInit() {
     return logger
 }
 
-function loggerMetadata(req = undefined, data = {}) {
+function metadata(req = undefined, data = {}) {
     let metadata = {timestamp: new Date().toISOString()}
 
     if (req) {
@@ -71,6 +71,6 @@ function fileTransportLogsOpts(name, opts = {}) {
 }
 
 module.exports = {
-    loggerMetadata,
-    loggerInit
+    metadata,
+    init
 }
