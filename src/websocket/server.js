@@ -8,7 +8,7 @@ function start(handler, listener, webSocketUtils) {
 
     // Subscribers API
 
-    // websocket auth config
+    // websocket auth config - TODO move out
     let ioToken = utils.ioTokenHash()
 
     let ioTokenRenewInterval = isNaN(+process.env.IO_TOKEN_RENEW_INTERVAL) || typeof +process.env.IO_TOKEN_RENEW_INTERVAL != 'number' ? 86400000 : +process.env.IO_TOKEN_RENEW_INTERVAL
