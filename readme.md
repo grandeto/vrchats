@@ -1,6 +1,6 @@
 # Description
 
-Event-driven HTTP/WebSocket real-time chat processor based on Socket.io
+HTTP/WebSocket real-time chat processor based on Socket.io
 
 # Requirements
 
@@ -10,9 +10,9 @@ Event-driven HTTP/WebSocket real-time chat processor based on Socket.io
 
 # Features
 
-- HTTP events handler
+- HTTP event handler
 - WebSocket broadcast emitter
-- Whitelisting: Origin, IP ranges, PROXY ranges
+- Whitelisting: Origin, IP range, PROXY range
 - Subscribers: WebSocket Auth, Rate Limiter
 - Front-end client
 
@@ -52,6 +52,10 @@ net.ipv4.ip_local_port_range = 10000 65535
 ulimit -Sa && echo -e "\n" && ulimit -Ha
 ```
 
+## Tune Node.js for websocket connections
+
+- https://blog.jayway.com/2015/04/13/600k-concurrent-websocket-connections-on-aws-using-node-js/
+
 ## Env create (Docker)
 
 - Install docker
@@ -76,24 +80,18 @@ chmod 600 ./certs/*.pem
 
 - Whitelist `.env` defined ports in your firewall
 
+### Prod
+
 - Build an image
 
 ```bash
 docker build --build-arg NODE_VERSION=14.18.1 --build-arg NPM_VERSION=8.1.1 -t "vrchats" .
 ```
 
-- Run the image in container (set --cpus, --memory and ports depending on your configuration)
-
-prod:
+- Run the image in container (set or remove --cpus, --memory and ports depending on your configuration)
 
 ```bash
 docker run -d --name vrchats --restart always --cpus="3" --memory=15500mb -p 8443:8443 -p 2053:2053 vrchats
-```
-
-local:
-
-```bash
-docker run --name vrchats -p 8443:8443 -p 2053:2053 vrchats
 ```
 
 - Attach to the container, check `ulimits` and tune whatever needed
@@ -104,15 +102,25 @@ docker exec -it vrchats /bin/bash
 ulimit -Sa && echo -e "\n" && ulimit -Ha
 ```
 
-- Test the service
+- applying changes
 
+```bash
+docker build --build-arg NODE_VERSION=14.18.1 --build-arg NPM_VERSION=8.1.1 -t "vrchats" .
+
+docker stop vrchats && docker rm vrchats && docker run -d --name vrchats --restart always --cpus="3" --memory=15500mb -p 8443:8443 -p 2053:2053 vrchats
 ```
-https://example.com:2053/status - should return 200 OK
 
-https://example.com:8443 - should return 404 "Cannot GET /"
+### Dev
+
+```bash
+npm run dev.run
+
+npm run dev.remove
+
+npm run dev.update
 ```
 
-# pm2 how-to
+## Env create (pm2)
 
 - Save pm2 settings
 
@@ -148,17 +156,16 @@ Environment=PRODUCER_PORT=2053
 Environment=CONSUMER_PORT=8443
 Environment=STANDALONE_PORT=8443
 Environment=ALLOWED_ORIGINS="https://example.com"
-Environment=ALLOWED_IPS="123.123.123.123/32,127.0.0.1/32,::1/128"
+Environment=TRUST_CIDR_LIST="123.123.123.123/32,127.0.0.1/32,::1/128"
 Environment=USE_PROXY=1
-Environment=TRUST_PROXY="103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,104.16.0.0/13,104.24.0.0/14,108.162.192.0/18,131.0.72.0/22,141.101.64.0/18,162.158.0.0/15,172.64.0.0/13,173.245.48.0/20,188.114.96.0/20,190.93.240.0/20,197.234.240.0/22,198.41.128.0/17,2400:cb00::/32,2606:4700::/32,2803:f800::/32,2405:b500::/32,2405:8100::/32,2c0f:f248::/32,2a06:98c0::/29"
+Environment=TRUST_PROXY_LIST="103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,104.16.0.0/13,104.24.0.0/14,108.162.192.0/18,131.0.72.0/22,141.101.64.0/18,162.158.0.0/15,172.64.0.0/13,173.245.48.0/20,188.114.96.0/20,190.93.240.0/20,197.234.240.0/22,198.41.128.0/17,2400:cb00::/32,2606:4700::/32,2803:f800::/32,2405:b500::/32,2405:8100::/32,2c0f:f248::/32,2a06:98c0::/29"
 Environment=PUB_KEY_PATH=/var/www/vrchats/pubkey.pem
 Environment=PRIV_KEY_PATH=/var/www/vrchats/privkey.pem
 Environment=CA_PATH=/var/www/vrchats/ca.pem
 Environment=VERIFY_ORIGIN=1
-Environment=IO_TOKEN_RENEW_START_HOUR=0
-Environment=IO_TOKEN_RENEW_INTERVAL=86400000
-Environment=LOGS_DIR=/var/www/vrchats/logs
-Environment=AUTH_TOKEN_SECRET="some-nasty-secret"
+Environment=WEBSOCKET_AUTH_TOKEN_RENEW_START_HOUR=0
+Environment=WEBSOCKET_AUTH_TOKEN_RENEW_INTERVAL=86400000
+Environment=WEBSOCKET_AUTH_TOKEN_SECRET="some-nasty-secret"
 ```
 
 - Execute `sudo systemctl daemon-reload`
@@ -171,7 +178,7 @@ Environment=AUTH_TOKEN_SECRET="some-nasty-secret"
 pm2 ls - should display list of running instances having status online
 ```
 
-## pm2 applying changes
+### pm2 applying changes
 
 - `pm2 ls && pm2 stop all && pm2 delete all`
 
@@ -180,6 +187,16 @@ pm2 ls - should display list of running instances having status online
 - `sudo systemctl restart pm2-$USER`
 
 - `pm2 ls` - verify pm2 started successfuly the app instances with new pids
+
+## Test the service
+
+```
+https://example.com:2053/status - should return 200 OK
+
+https://example.com:8443 - should return 404 "Cannot GET /"
+```
+
+# Troubleshooting and known issues
 
 ## pm2 knows issues
 
@@ -199,15 +216,6 @@ pm2 ls - should display list of running instances having status online
 - [stackoverflow 43786412](https://stackoverflow.com/questions/43786412/get-message-spawning-pm2-daemon-with-pm2-home-home-dir-pm2-always/69510630#69510630)
 
 - If your home directory is encrypted in order to demonize with `pm2 startup` all the node.js, npm and app raleted files should be outside of the home dir or try [link1](https://bbs.archlinux.org/viewtopic.php?id=201781) [link2](https://superuser.com/questions/1037466/how-to-start-a-systemd-service-after-user-login-and-stop-it-before-user-logout) [link3](https://bbs.archlinux.org/viewtopic.php?id=244264)
-
-
-# Troubleshooting and known issues
-
-## Running in debug mode
-
-```bash
-DEBUG=* node --nouse-idle-notification --expose-gc --max-old-space-size=8192 --trace-sync-io app.js
-```
 
 # Release
 
