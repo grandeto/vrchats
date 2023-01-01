@@ -5,14 +5,16 @@ function start(handler, listener, webSocketUtils) {
     const logger = webSocketUtils.logger
     const log = webSocketUtils.log
     const rateLimiter = webSocketUtils.rateLimiter
+    const port = utils.webSocketServerPort()
+    const ioTokenRenewInterval = utils.webSocketAuthTokenRenewInterval()
+    const tokenSecret = utils.webSocketAuthTokenSecret()
 
     // Subscribers API
 
     // websocket auth config - TODO move out
-    let ioToken = utils.ioTokenHash()
+    let ioToken = utils.authTokenHash(tokenSecret)
 
-    let ioTokenRenewInterval = isNaN(+process.env.IO_TOKEN_RENEW_INTERVAL) || typeof +process.env.IO_TOKEN_RENEW_INTERVAL != 'number' ? 86400000 : +process.env.IO_TOKEN_RENEW_INTERVAL
-    let ioTokenRenewStartHour = +process.env.IO_TOKEN_RENEW_START_HOUR
+    let ioTokenRenewStartHour = utils.webSocketAuthTokenRenewStartHour()
     let time = new Date()
 
     ioTokenRenewStartHour = isNaN(ioTokenRenewStartHour) || (ioTokenRenewStartHour < 0 || ioTokenRenewStartHour > 23) ? time.getUTCHours() : ioTokenRenewStartHour
@@ -22,9 +24,9 @@ function start(handler, listener, webSocketUtils) {
     let timeToNextIoTokenRenewInterval = time.getTime() - new Date().getTime()
 
     setTimeout(function() {
-        ioToken = utils.ioTokenHash()
+        ioToken = utils.authTokenHash(tokenSecret)
         setInterval(function() {
-            ioToken = utils.ioTokenHash()
+            ioToken = utils.authTokenHash(tokenSecret)
         }, ioTokenRenewInterval)
     }, timeToNextIoTokenRenewInterval)
 
@@ -58,8 +60,14 @@ function start(handler, listener, webSocketUtils) {
         }
     })
 
-    listener.listen(+process.env.WEBSOCKET_PORT || 8443, () => {
-        logger.info('Listening...' + process.env.WEBSOCKET_PORT, log.metadata())
+    handler.on("connection", async (socket) => {
+        const userId = socket.handshake.query.uniqueUserId
+
+        socket.join(userId);
+    });
+
+    listener.listen(port, () => {
+        logger.info('Listening...' + port, log.metadata())
     })
 }
 

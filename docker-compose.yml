@@ -1,0 +1,25 @@
+version: '3.7'
+
+services:
+
+  server:
+    build:
+      context: .
+      args:
+        - NODE_VERSION=14.18.1
+        - NPM_VERSION=8.1.1
+      dockerfile: Dockerfile
+      target: builder
+      ssh:
+        - default
+    ports:
+      - "8443:8443"
+      - "2053:2053"
+
+    # mounting the project so we execute the existing state from our local filesystem
+    volumes:
+      - ".:/var/www/vrchats"
+    working_dir: /var/www/vrchats
+    env_file: .env
+    # watch and rerun on change
+    command: "reflex -v -r '\\.js$$' -s -- pm2-runtime /var/www/vrchats/app.config.js"

@@ -1,5 +1,3 @@
-require('dotenv').config()
-
 const utils = require('./src/utils.js')
 const log = require('./src/logger.js')
 const logger = log.init()
@@ -21,14 +19,15 @@ const httpUtils = {
     log: log,
     isIP: isIP,
     inRange: inRange,
-    parser: httpHandler.json()
+    parser: httpHandler.json(),
+    eventIDValidator: utils.eventIDValidator()
 }
 
 const httpOpts = {
     key: readFileSync(utils.privKeyPath()),
     cert: readFileSync(utils.pubKeyPath()),
     ca: readFileSync(utils.caPath()),
-    requestCert: process.env.VERIFY_ORIGIN == 1
+    requestCert: utils.verifyOrigin()
 }
 
 const webSocketServer = require('./src/websocket/server.js')

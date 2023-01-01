@@ -16,8 +16,15 @@ RUN apt-get update \
     && apt-get autoremove -y \
     && apt-get install -y apt-utils
 
-Run apt-get install -y wget ca-certificates apt-transport-https locales && rm -rf /var/lib/apt/lists/* \
+RUN apt-get install -y curl wget ca-certificates apt-transport-https locales && rm -rf /var/lib/apt/lists/* \
 	&& localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
+
+# Boost local development with reflex
+ARG REFLEX_VERSION=v0.3.1
+RUN curl -Lo /tmp/reflex_linux_amd64.tar.gz https://github.com/cespare/reflex/releases/download/$REFLEX_VERSION/reflex_linux_amd64.tar.gz \
+    && tar -xvf /tmp/reflex_linux_amd64.tar.gz --directory /tmp/ \
+    && mv /tmp/reflex_linux_amd64/reflex /usr/local/bin/reflex \
+    && chmod +x /usr/local/bin/reflex
 
 ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
 
@@ -82,10 +89,11 @@ RUN if [ ! -d $APP_DIR ]; then \
     fi;
 
 COPY certs $APP_DIR/certs/
-COPY logs $APP_DIR/logs/
 COPY src $APP_DIR/src/
-COPY *.js $APP_DIR/
-COPY *.json $APP_DIR/
+COPY app.config.js $APP_DIR/
+COPY app.js $APP_DIR/
+COPY package.json $APP_DIR/
+COPY package-lock.json $APP_DIR/
 COPY .env $APP_DIR/
 COPY docker-entrypoint.sh /usr/local/bin/
 
