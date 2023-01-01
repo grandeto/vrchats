@@ -1,12 +1,14 @@
-const path = require('path');
+require('dotenv').config()
 
-const app = path.join(path.normalize(process.env.APP_DIR), "./app.js")
+const path = require('path');
+const utils = require('./src/utils.js')
+const app = path.join(path.normalize(utils.appDir()), "./app.js")
 
 module.exports = {
     apps: [{
         name: "vrchats",
         script: app,
         exp_backoff_restart_delay: 500,
-        node_args: "--nouse-idle-notification --expose-gc --max-old-space-size=8192"
+        node_args: utils.nodeArgs()
     }]
 }
