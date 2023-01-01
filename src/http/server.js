@@ -1,19 +1,26 @@
 const { createServer } = require('https')
 
-function start(server, handler, httpOpts, httpUtils, webSocketHandler) {
-    const utils = httpUtils.utils
-    const logger = httpUtils.logger
-    const log = httpUtils.log
-    const isIP = httpUtils.isIP
-    const inRange = httpUtils.inRange
-    const parser = httpUtils.parser
+function start(server, handler, httpOpts, serverUtils, webSocketHandler) {
+    const utils = serverUtils.utils
+    const logger = serverUtils.logger
+    const log = serverUtils.log
+    const isIP = serverUtils.isIP
+    const inRange = serverUtils.inRange
+    const parser = serverUtils.parser
+    const eventIDValidator = serverUtils.eventIDValidator
+    const port = utils.httpServerPort()
+    const useProxy = utils.useProxy()
+    const trustProxyList = utils.trustProxyList()
+    const trustCIDRList = utils.trustCIDRList()
 
     const httpsServer = server(httpOpts, handler)
+    const httpForbidden = "FORBIDDEN"
+    const httpDebug = utils.debugEnabled()
 
     // http handler config
     handler.set('x-powered-by', false)
-    if (process.env.USE_PROXY == 1) {
-        handler.set('trust proxy', process.env.TRUST_PROXY || true)
+    if (useProxy) {
+        handler.set('trust proxy', trustProxyList || true)
     }
 
     handler.use(parser)
@@ -22,28 +29,29 @@ function start(server, handler, httpOpts, httpUtils, webSocketHandler) {
 
     // middleware
     handler.use((req, res, next) => {
-        let allowedIps = process.env.ALLOWED_IPS.split(','),
-            trustProxy = process.env.TRUST_PROXY.split(','),
-            ip = utils.fetchV4Ip(req.socket.remoteAddress)
+        let ip = utils.fetchIPv4(req.socket.remoteAddress)
 
-        if (process.env.USE_PROXY == 1) {
+        if (useProxy) {
             let proxyIp = ip
             ip = req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for']
 
             if (!isIP(proxyIp) || !isIP(ip)) {
                 logger.error('invalid proxy_ip or ip', log.metadata(req))
-                res.status(403).send('Forbidden')
-            } else if (!inRange(proxyIp, trustProxy) || !inRange(ip, allowedIps)) {
-                // in case the service is behind cloudflare, add cloudflare's ip ranges in .env TRUST_PROXY
+                res.status(403).send(httpForbidden)
+            } else if (!inRange(proxyIp, trustProxyList) || !inRange(ip, trustCIDRList)) {
+                // in case the service is behind cloudflare, add cloudflare's ip ranges in .env TRUST_PROXY_LIST
                 logger.error('untrusted proxy_ip or ip', log.metadata(req))
-                res.status(403).send('Forbidden')
+                res.status(403).send(httpForbidden)
             } else {
                 next()
             }
         } else {
-            if (!isIP(ip) || !inRange(ip, allowedIps)) {
-                logger.error('invalid or untrusted ip', log.metadata(req))
-                res.status(403).send('Forbidden')
+            if (!isIP(ip)) {
+                logger.error('invalid', log.metadata(req))
+                res.status(403).send(httpForbidden)
+            } else if (!inRange(ip, trustCIDRList)) {
+                logger.error('untrusted ip', log.metadata(req))
+                res.status(403).send(httpForbidden)
             } else {
                 next()
             }
@@ -57,32 +65,33 @@ function start(server, handler, httpOpts, httpUtils, webSocketHandler) {
 
     // events
     handler.post('/publish', (req, res) => {
-        if (new RegExp('^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$').test(req.body.uuid)) {
-            let to = req.body.uuid
-            delete req.body.uuid
-            webSocketHandler.emit(to, req.body)
+        if (httpDebug) {
+            logger.info('-----DEBUG-----')
+            logger.info(req.body, log.metadata(req))
+        }
 
-            res.status(200).send('OK')
-        } else {
-            logger.error('Invalid to.uuid', log.metadata(req, {
-                toUiid: req.body.to.uuid,
-                fromId: req.body.from.id
-            }))
-
+        if (!eventIDValidator.test(req.body.target_id)) {
+            logger.error('Invalid req.body.id', log.metadata(req))
             res.status(400).send('BAD REQUEST')
         }
+
+        let roomIdTargetId = req.body.target_id
+        delete req.body.target_id
+
+        webSocketHandler.to(roomIdTargetId).emit(roomIdTargetId, req.body)
+
+        res.status(200).send('OK')
     })
 
     // errors
     handler.use((err, req, res, next) => {
         logger.error('req/res error', log.metadata(req, {stack: err.stack}))
-        res.status(500).send('ISE')
+        res.status(500).send('INTERNAL SERVER ERROR')
     })
 
     // listen
-
-    httpsServer.listen(+process.env.HTTP_PORT || 2053, () => {
-        logger.info('Listening...' + process.env.HTTP_PORT, log.metadata())
+    httpsServer.listen(port, () => {
+        logger.info('Listening...' + port, log.metadata())
     })
 }
 
