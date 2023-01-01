@@ -6,7 +6,10 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build:client": "browserify client/broadcast.js > dist/broadcast-bundle.js",
-    "build:client:min": "npm run build:client && uglifyjs --compress --mangle --output dist/broadcast-bundle.min.js -- dist/broadcast-bundle.js"
+    "build:client:min": "npm run build:client && uglifyjs --compress --mangle --output dist/broadcast-bundle.min.js -- dist/broadcast-bundle.js",
+    "dev.run": "docker-compose up --remove-orphans --build",
+    "dev.remove": "docker-compose down -v",
+    "dev.update": "npm run dev.remove && npm run dev.run"
   },
   "repository": {
     "type": "git",
@@ -22,8 +25,7 @@
     "rate-limiter-flexible": "^2.2.4",
     "resolve-global": "^1.0.0",
     "socket.io": "^4.2.0",
-    "winston": "^3.3.3",
-    "winston-daily-rotate-file": "^4.5.5"
+    "winston": "^3.3.3"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.3",
