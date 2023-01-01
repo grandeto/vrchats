@@ -74,8 +74,8 @@ function trustCIDRList() {
     return process.env.TRUST_CIDR_LIST.split(',')
 }
 
-function allowedOrigins() {
-    return process.env.ALLOWED_ORIGINS.split(',')
+function trustOriginList() {
+    return process.env.TRUST_ORIGIN_LIST.split(',')
 }
 
 function verifyOrigin() {
@@ -124,7 +124,7 @@ module.exports = {
     useProxy,
     trustProxyList,
     trustCIDRList,
-    allowedOrigins,
+    trustOriginList,
     verifyOrigin,
     fetchIPv4,
     webSocketAuthTokenSecret,

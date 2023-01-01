@@ -35,7 +35,7 @@ const webSocketListener = webSocketServer.createServer(httpOpts, httpHandler())
 const webSocketOpts = {
     serveClient: false,
     cors: {
-        origin: utils.allowedOrigins(),
+        origin: utils.trustOriginList(),
         methods: ['GET', 'POST']
     }
 }

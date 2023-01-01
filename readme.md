@@ -11,8 +11,8 @@ HTTP/WebSocket real-time chat processor based on Socket.io
 # Features
 
 - HTTP event handler
-- WebSocket broadcast emitter
-- Whitelisting: Origin, IP range, PROXY range
+- WebSocket multicast emitter
+- Publishers: Trusted Origins, CIDRs, PROXY
 - Subscribers: WebSocket Auth, Rate Limiter
 - Front-end client
 
@@ -155,7 +155,7 @@ Environment=CLUSTER_INSTANCES="-1"
 Environment=PRODUCER_PORT=2053
 Environment=CONSUMER_PORT=8443
 Environment=STANDALONE_PORT=8443
-Environment=ALLOWED_ORIGINS="https://example.com"
+Environment=TRUST_ORIGIN_LIST="https://example.com"
 Environment=TRUST_CIDR_LIST="123.123.123.123/32,127.0.0.1/32,::1/128"
 Environment=USE_PROXY=1
 Environment=TRUST_PROXY_LIST="103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,104.16.0.0/13,104.24.0.0/14,108.162.192.0/18,131.0.72.0/22,141.101.64.0/18,162.158.0.0/15,172.64.0.0/13,173.245.48.0/20,188.114.96.0/20,190.93.240.0/20,197.234.240.0/22,198.41.128.0/17,2400:cb00::/32,2606:4700::/32,2803:f800::/32,2405:b500::/32,2405:8100::/32,2c0f:f248::/32,2a06:98c0::/29"
