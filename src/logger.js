@@ -2,28 +2,15 @@ const path = require('path');
 
 function init() {
     const { createLogger, transports, format } = require('winston')
-    require('winston-daily-rotate-file')
     const logger = createLogger({
         level: 'info',
         defaultMeta: {serverStarted: new Date().toISOString(), pid: process.pid},
         format: format.json(),
         transports: [
-            new transports.DailyRotateFile(fileTransportLogsOpts('error', {level: 'error'})),
-            new transports.DailyRotateFile(fileTransportLogsOpts('combined')),
-        ],
-        exceptionHandlers: [
-            new transports.DailyRotateFile(fileTransportLogsOpts('exceptions'))
-        ],
-        rejectionHandlers: [
-            new transports.DailyRotateFile(fileTransportLogsOpts('rejections'))
+            new transports.Console(),
         ],
         exitOnError: false
     })
-    if (process.env.NODE_ENV !== 'production') {
-        logger.add(new transports.Console({
-            format: format.simple(),
-        }))
-    }
 
     return logger
 }
@@ -57,17 +44,6 @@ function metadata(req = undefined, data = {}) {
     }
 
     return Object.assign(metadata, data)
-}
-
-function fileTransportLogsOpts(name, opts = {}) {
-    return Object.assign({
-            dirname: path.normalize(process.env.LOGS_DIR),
-            filename: name + '-%DATE%.log',
-            datePattern: 'YYYY-MM-DD',
-            zippedArchive: true,
-            maxSize: '20m',
-            maxFiles: '30d',
-            utc: true}, opts)
 }
 
 module.exports = {
