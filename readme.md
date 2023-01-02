@@ -1,6 +1,6 @@
 # Description
 
-HTTP/WebSocket real-time chat processor based on Socket.io
+HTTP/WebSocket real-time message processor based on Socket.io
 
 # Requirements
 
@@ -14,7 +14,6 @@ HTTP/WebSocket real-time chat processor based on Socket.io
 - WebSocket multicast emitter
 - Publishers: Trusted Origins, CIDRs, PROXY
 - Subscribers: WebSocket Auth, Rate Limiter
-- Front-end client
 
 # Environment
 
@@ -188,13 +187,27 @@ pm2 ls - should display list of running instances having status online
 
 - `pm2 ls` - verify pm2 started successfuly the app instances with new pids
 
-## Test the service
+# Test connectivity
 
 ```
 https://example.com:2053/status - should return 200 OK
 
 https://example.com:8443 - should return 404 "Cannot GET /"
 ```
+
+# Monitoring
+
+- set `ENABLE_DEBUG=1`
+
+- rebuild and deploy
+
+- attach to container
+
+`pm2 monit` and `pm2 logs`
+
+- TODO export and collect metrics
+
+- TODO collect log stream
 
 # Troubleshooting and known issues
 
@@ -217,11 +230,19 @@ https://example.com:8443 - should return 404 "Cannot GET /"
 
 - If your home directory is encrypted in order to demonize with `pm2 startup` all the node.js, npm and app raleted files should be outside of the home dir or try [link1](https://bbs.archlinux.org/viewtopic.php?id=201781) [link2](https://superuser.com/questions/1037466/how-to-start-a-systemd-service-after-user-login-and-stop-it-before-user-logout) [link3](https://bbs.archlinux.org/viewtopic.php?id=244264)
 
+# Cluster mode
+
+- TODO k8s managed chat cluster with shared, sticky sessions free, instance-subscribers registry
+
+# Client
+
+- check the client_example dir and socket.io docs
+
 # Release
 
 - create branch vX.X.X
-- `npm run build:client:min`
-- open & merge PR `master <- vX.X.X`
+- open PR `master <- vX.X.X`
+- merge PR
 - wait for github actions
 - draft new release -> create tag -> publish
 - npm login

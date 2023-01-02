@@ -1,12 +1,10 @@
 {
   "name": "@grandeto/vrchats",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Event driven real-time chat based on Socket.io",
   "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build:client": "browserify client/broadcast.js > dist/broadcast-bundle.js",
-    "build:client:min": "npm run build:client && uglifyjs --compress --mangle --output dist/broadcast-bundle.min.js -- dist/broadcast-bundle.js",
     "dev.run": "docker-compose up --remove-orphans --build",
     "dev.remove": "docker-compose down -v",
     "dev.update": "npm run dev.remove && npm run dev.run"
@@ -32,11 +30,6 @@
     "utf-8-validate": "^5.0.5"
   },
   "devDependencies": {
-    "@babel/polyfill": "7.12.1",
-    "broadcast-channel": "^4.2.0",
-    "browserify": "17.0.0",
-    "socket.io-client": "^4.2.0",
-    "uglify-js": "^3.14.2"
   },
   "bugs": {
     "url": "https://github.com/grandeto/vrchats/issues"
