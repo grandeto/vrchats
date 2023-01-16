@@ -6,29 +6,33 @@ function start(handler, listener, webSocketUtils) {
     const log = webSocketUtils.log
     const rateLimiter = webSocketUtils.rateLimiter
     const port = utils.webSocketServerPort()
+    const webSocketAuthEnabled = utils.webSocketAuthEnabled()
     const ioTokenRenewInterval = utils.webSocketAuthTokenRenewInterval()
     const tokenSecret = utils.webSocketAuthTokenSecret()
 
     // Subscribers API
 
-    // websocket auth config - TODO move out
-    let ioToken = utils.authTokenHash(tokenSecret)
-
-    let ioTokenRenewStartHour = utils.webSocketAuthTokenRenewStartHour()
-    let time = new Date()
-
-    ioTokenRenewStartHour = isNaN(ioTokenRenewStartHour) || (ioTokenRenewStartHour < 0 || ioTokenRenewStartHour > 23) ? time.getUTCHours() : ioTokenRenewStartHour
-    ioTokenRenewStartHour = ioTokenRenewStartHour === 0 ? 24 : ioTokenRenewStartHour
-    ioTokenRenewStartHour = ioTokenRenewStartHour <= time.getUTCHours() ? (time.getUTCHours()+1) : ioTokenRenewStartHour
-    time.setUTCHours(ioTokenRenewStartHour, 0, 0, 0)
-    let timeToNextIoTokenRenewInterval = time.getTime() - new Date().getTime()
-
-    setTimeout(function() {
+    // websocket auth token renewal - TODO move out from the server
+    let ioToken = ""
+    if (webSocketAuthEnabled) {
         ioToken = utils.authTokenHash(tokenSecret)
-        setInterval(function() {
+
+        let ioTokenRenewStartHour = utils.webSocketAuthTokenRenewStartHour()
+        let time = new Date()
+
+        ioTokenRenewStartHour = isNaN(ioTokenRenewStartHour) || (ioTokenRenewStartHour < 0 || ioTokenRenewStartHour > 23) ? time.getUTCHours() : ioTokenRenewStartHour
+        ioTokenRenewStartHour = ioTokenRenewStartHour === 0 ? 24 : ioTokenRenewStartHour
+        ioTokenRenewStartHour = ioTokenRenewStartHour <= time.getUTCHours() ? (time.getUTCHours()+1) : ioTokenRenewStartHour
+        time.setUTCHours(ioTokenRenewStartHour, 0, 0, 0)
+        let timeToNextIoTokenRenewInterval = time.getTime() - new Date().getTime()
+
+        setTimeout(function() {
             ioToken = utils.authTokenHash(tokenSecret)
-        }, ioTokenRenewInterval)
-    }, timeToNextIoTokenRenewInterval)
+            setInterval(function() {
+                ioToken = utils.authTokenHash(tokenSecret)
+            }, ioTokenRenewInterval)
+        }, timeToNextIoTokenRenewInterval)
+    }
 
     // websocket middleware
     handler.use(async (socket, next) => {
@@ -44,7 +48,7 @@ function start(handler, listener, webSocketUtils) {
         if (hasToBeLimited) {
             logger.error('rate limit block', log.metadata(socket.handshake, {uniqueUserId: socket.handshake.query.uniqueUserId}))
             next(new Error('rate limit block'))
-        } else if (socket.handshake.auth.token != ioToken) {
+        } else if (webSocketAuthEnabled && socket.handshake.auth.token != ioToken) {
             logger.error('auth token error', log.metadata(socket.handshake, {
                 token: ioToken,
                 tokenReceived: socket.handshake.auth.token,

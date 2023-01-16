@@ -86,6 +86,10 @@ function fetchIPv4(ip) {
     return ip.substr(0, 7) == '::ffff:' ? ip.substr(7) : ip
 }
 
+function webSocketAuthEnabled() {
+    return +process.env.WEBSOCKET_AUTH
+}
+
 function webSocketAuthTokenSecret() {
     return process.env.WEBSOCKET_AUTH_TOKEN_SECRET
 }
@@ -127,6 +131,7 @@ module.exports = {
     trustOriginList,
     verifyOrigin,
     fetchIPv4,
+    webSocketAuthEnabled,
     webSocketAuthTokenSecret,
     webSocketAuthTokenRenewInterval,
     webSocketAuthTokenRenewStartHour,
