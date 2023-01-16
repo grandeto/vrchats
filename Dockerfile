@@ -10,6 +10,13 @@ SHELL ["/bin/bash", "-c"]
 # Disable Prompt During Packages Installation
 ARG DEBIAN_FRONTEND=noninteractive
 
+# Create non-root user
+ARG VRCHATS_USER=vrchats
+ARG VRCHATS_USER_HOME=/home/vrchats
+
+RUN echo "CREATE_HOME yes" >> /etc/login.defs
+RUN useradd -s /sbin/nologin -c "Docker image user" $VRCHATS_USER
+
 # OS update and config
 RUN apt-get update \
     && apt-get upgrade -y \
@@ -32,7 +39,7 @@ ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
 ARG NODE_VERSION
 ARG NPM_VERSION
 
-ENV PATH=$PATH:/usr/local/lib/nodejs/bin:/root/.nodejs/bin
+ENV PATH=$PATH:/usr/local/lib/nodejs/bin:$VRCHATS_USER_HOME/.nodejs/bin
 
 RUN if [ -z $NODE_VERSION ] || [[ ! $NODE_VERSION =~ ^[0-9]+\.[0-9]+\.[0-9] ]]; then \
         echo "incorrect --build-arg NODE_VERSION"; \
@@ -48,7 +55,7 @@ ARG NEW_NODE_ARCHIVE="node-v$NODE_VERSION-linux-x64.tar.gz"
 ARG NEW_NODE_EXTRACTED_DIR="node-v$NODE_VERSION-linux-x64"
 
 ARG NODE_INSTALL_DIR=/usr/local/lib/nodejs
-ARG NPM_INSTALL_DIR=.nodejs
+ARG NPM_INSTALL_DIR=$VRCHATS_USER_HOME/.nodejs
 
 RUN if [ ! -d $NODE_INSTALL_DIR ]; then \
         mkdir -p $NODE_INSTALL_DIR; \
@@ -74,9 +81,14 @@ RUN tar -xvf $NEW_NODE_ARCHIVE --directory $NODE_INSTALL_DIR \
     && cp -R $NODE_INSTALL_DIR/$NEW_NODE_EXTRACTED_DIR/* $NODE_INSTALL_DIR \
     && rm -rf $NODE_INSTALL_DIR/$NEW_NODE_EXTRACTED_DIR
 
-RUN npm config set prefix $NPM_INSTALL_DIR \
-    && npm install -g npm@$NPM_VERSION \
-    && rm $NODE_INSTALL_DIR/bin/np*
+RUN chmod 755 $NODE_INSTALL_DIR/bin/node
+RUN chmod 755 $NODE_INSTALL_DIR/bin/npm
+
+RUN npm config set prefix $NPM_INSTALL_DIR
+
+RUN npm install -g npm@$NPM_VERSION
+
+RUN rm $NODE_INSTALL_DIR/bin/np*
 
 # Install pm2
 RUN npm install -g pm2
@@ -97,9 +109,23 @@ COPY package-lock.json $APP_DIR/
 COPY .env $APP_DIR/
 COPY docker-entrypoint.sh /usr/local/bin/
 
+RUN find $APP_DIR -type d -exec chmod 755 {} \;
+RUN find $APP_DIR -type f -exec chmod 644 {} \;
+
 RUN chmod 600 $APP_DIR/.env
 RUN chmod 600 $APP_DIR/certs/*.pem
-RUN cd $APP_DIR && npm install
+
+RUN chown -R $VRCHATS_USER:$VRCHATS_USER $VRCHATS_USER_HOME
+RUN chown -R $VRCHATS_USER:$VRCHATS_USER $APP_DIR
+
+USER $VRCHATS_USER
+
+WORKDIR $APP_DIR
+
+RUN npm install
+
+EXPOSE 2053
+EXPOSE 8443
 
 ENTRYPOINT ["docker-entrypoint.sh"]
 

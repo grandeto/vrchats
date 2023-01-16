@@ -41,6 +41,7 @@ const webSocketOpts = {
 }
 const webSocketHandler = new Server(webSocketListener, webSocketOpts)
 
+// http server
 const httpServer = require('./src/http/server.js')
 httpServer.start(httpServer.createServer, httpHandler(), httpOpts, httpUtils, webSocketHandler)
 
@@ -51,6 +52,7 @@ const webSocketUtils = {
     rateLimiter: rateLimiter
 }
 
+// websocket server
 webSocketServer.start(webSocketHandler, webSocketListener, webSocketUtils)
 
 // GC

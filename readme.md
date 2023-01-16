@@ -109,6 +109,10 @@ docker build --build-arg NODE_VERSION=14.18.1 --build-arg NPM_VERSION=8.1.1 -t "
 docker stop vrchats && docker rm vrchats && docker run -d --name vrchats --restart always --cpus="3" --memory=15500mb -p 8443:8443 -p 2053:2053 vrchats
 ```
 
+- *NOTE: Consider adding a cronjob in order to handle https://github.com/grandeto/vrchats#pm2-knows-issues
+
+    `0 0 * * * docker restart vrchats`
+
 ### Dev
 
 ```bash

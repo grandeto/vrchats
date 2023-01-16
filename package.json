@@ -1,11 +1,11 @@
 {
   "name": "@grandeto/vrchats",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Event driven real-time chat based on Socket.io",
   "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev.run": "docker-compose up --remove-orphans --build",
+    "dev.run": "NOCACHE=$(date +%s) BUILDKIT_PROGRESS=plain docker-compose up --remove-orphans --build",
     "dev.remove": "docker-compose down -v",
     "dev.update": "npm run dev.remove && npm run dev.run"
   },
