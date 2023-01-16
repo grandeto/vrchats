@@ -5,7 +5,7 @@
   "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev.run": "docker-compose up --remove-orphans --build",
+    "dev.run": "NOCACHE=$(date +%s) BUILDKIT_PROGRESS=plain docker-compose up --remove-orphans --build",
     "dev.remove": "docker-compose down -v",
     "dev.update": "npm run dev.remove && npm run dev.run"
   },
