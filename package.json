@@ -1,6 +1,6 @@
 {
   "name": "@grandeto/vrchats",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "Event driven real-time chat based on Socket.io",
   "main": "app.js",
   "scripts": {

@@ -23,7 +23,7 @@ RUN apt-get update \
     && apt-get autoremove -y \
     && apt-get install -y apt-utils
 
-RUN apt-get install -y curl wget ca-certificates apt-transport-https locales && rm -rf /var/lib/apt/lists/* \
+RUN apt-get install -y curl wget gnupg ca-certificates apt-transport-https locales && rm -rf /var/lib/apt/lists/* \
 	&& localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
 
 # Boost local development with reflex
@@ -65,8 +65,28 @@ RUN if [ ! -d $NODE_INSTALL_DIR ]; then \
         mkdir -p $NPM_INSTALL_DIR; \
     fi;
 
+RUN rm -rf /var/lib/apt/lists/* \
+    && for key in \
+      4ED778F539E3634C779C87C6D7062848A1AB005C \
+      141F07595B7B3FFE74309A937405533BE57C7D57 \
+      74F12602B6F1C4E913FAA37AD3A89613643B6201 \
+      61FC681DFB92A079F1685E77973F295594EC4689 \
+      8FCCA13FEF1D0C2E91008E09770F7A9A5AE15600 \
+      C4F0DFFF4E8C1A8236409D08E73BC641CC11F4C8 \
+      890C08DB8579162FEE0DF9DB8BEAB4DFCF555EF4 \
+      C82FA3AE1CBEDC6BE46B9360C43CEC45C17AB93C \
+      108F52B48DB57BB0CC439B2997B01419BD92F80A \
+    ; do \
+      gpg --batch --keyserver hkps://keys.openpgp.org --recv-keys "$key" || \
+      gpg --batch --keyserver keyserver.ubuntu.com --recv-keys "$key" ; \
+    done
 
 RUN wget "https://nodejs.org/dist/v$NODE_VERSION/$NEW_NODE_ARCHIVE"
+RUN wget "http://nodejs.org/dist/v$NODE_VERSION/SHASUMS256.txt.asc"
+
+RUN gpg --batch --decrypt --output SHASUMS256.txt SHASUMS256.txt.asc \
+    && grep " $NEW_NODE_ARCHIVE\$" SHASUMS256.txt | sha256sum -c - \
+    && rm SHASUMS256.txt.asc SHASUMS256.txt
 
 RUN if [ ! -f $NEW_NODE_ARCHIVE ]; then \
         echo "ERROR: $NEW_NODE_ARCHIVE not found"; \
