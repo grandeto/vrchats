@@ -11,8 +11,8 @@ SHELL ["/bin/bash", "-c"]
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Create non-root user
-ARG VRCHATS_USER=vrchats
-ARG VRCHATS_USER_HOME=/home/vrchats
+ARG VRCHATS_USER
+ARG VRCHATS_USER_HOME=/home/$VRCHATS_USER
 
 RUN echo "CREATE_HOME yes" >> /etc/login.defs
 RUN useradd -s /sbin/nologin -c "Docker image user" $VRCHATS_USER
