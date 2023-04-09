@@ -6,9 +6,10 @@ services:
     build:
       context: .
       args:
-        - NODE_VERSION=14.18.1
-        - NPM_VERSION=8.1.1
+        - NODE_VERSION=18.15.0
+        - NPM_VERSION=9.5.0
         - NOCACHE=$${NOCACHE}
+        - VRCHATS_USER=$USER
       dockerfile: Dockerfile
       target: builder
       ssh:
