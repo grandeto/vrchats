@@ -3,6 +3,10 @@
   "version": "0.10.0",
   "description": "Event driven real-time chat based on Socket.io",
   "main": "app.js",
+  "engines": {
+    "npm": "9.5.0",
+    "node": "18.15.0"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev.run": "NOCACHE=$(date +%s) BUILDKIT_PROGRESS=plain docker-compose up --remove-orphans --build",
