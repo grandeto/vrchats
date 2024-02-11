@@ -243,10 +243,11 @@ https://example.com:8443 - should return 404 "Cannot GET /"
 
 # Release
 
-- create branch vX.X.X
+- create branch `vX.X.X`
 - open PR `master <- vX.X.X`
 - merge PR
 - wait for github actions
+- delete `vX.X.X`
 - draft new release -> create tag -> publish
 - git checkout master && git pull
 - npm login
