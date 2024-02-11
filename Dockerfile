@@ -50,4 +50,4 @@ EXPOSE 2053
 EXPOSE 8443
 
 ENTRYPOINT ["docker-entrypoint.sh"]
-CMD [ "pm2-runtime app.config.js" ]
+CMD [ "/var/www/vrchats/app.config.js" ]

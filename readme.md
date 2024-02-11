@@ -96,13 +96,13 @@ chmod 600 ./certs/*.pem
 - Build an image
 
 ```bash
-docker build --build-arg VRCHATS_USER=$USER -t "vrchats" .
+docker build -t "vrchats:vX.X.X" .
 ```
 
-- Run the image in container
+- Start a container
 
 ```bash
-docker run -d --name vrchats --restart always -p 8443:8443 -p 2053:2053 vrchats
+docker run -d --name vrchats --restart always -p 8443:8443 -p 2053:2053 vrchats:vX.X.X
 ```
 
 - applying changes
@@ -111,7 +111,7 @@ docker run -d --name vrchats --restart always -p 8443:8443 -p 2053:2053 vrchats
 
     ```bash
 
-    docker stop vrchats && docker rm vrchats && docker run -d --name vrchats --restart always -p 8443:8443 -p 2053:2053 vrchats
+    docker stop vrchats && docker rm vrchats && docker run -d --name vrchats --restart always -p 8443:8443 -p 2053:2053 vrchats:vX.X.X
     ```
 
 - *NOTE: Consider adding a cronjob in order to handle https://github.com/grandeto/vrchats#pm2-knows-issues
@@ -250,5 +250,6 @@ https://example.com:8443 - should return 404 "Cannot GET /"
 - merge PR
 - wait for github actions
 - draft new release -> create tag -> publish
+- checkout && pull master
 - npm login
 - npm publish --access public
