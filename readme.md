@@ -250,6 +250,6 @@ https://example.com:8443 - should return 404 "Cannot GET /"
 - merge PR
 - wait for github actions
 - draft new release -> create tag -> publish
-- checkout && pull master
+- git checkout master && git pull
 - npm login
 - npm publish --access public
