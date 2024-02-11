@@ -36,6 +36,7 @@ RUN find . -type d -exec chmod 755 {} \;
 RUN find . -type f -exec chmod 644 {} \;
 
 RUN chmod 600 .env
+RUN chmod 700 ./certs
 RUN chmod 600 ./certs/*.pem
 
 RUN npm install
