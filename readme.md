@@ -17,7 +17,9 @@ HTTP/WebSocket real-time message processor based on Socket.io
 
 # Environment
 
-## Tune OS (Linux)
+## Tune OS (Linux) and Node.js for websocket connections
+
+### https://tcminh.com/600k-concurrent-websocket-connections-on-aws-using-node-js/
 
 ```bash
 sudo nano /etc/security/limits.d/custom.conf
@@ -43,65 +45,68 @@ sudo nano /etc/sysctl.d/net.ipv4.ip_local_port_range.conf
 net.ipv4.ip_local_port_range = 10000 65535
 ```
 
-- Logout
-
-- Check your `ulimits` and tune whatever else needed
+- check `ulimits`
 
 ```bash
 ulimit -Sa && echo -e "\n" && ulimit -Ha
 ```
 
-## Tune Node.js for websocket connections
+- set memlock if too low
+    - example of setting 15.5GB memlock in /etc/docker/daemon.json
 
-- https://blog.jayway.com/2015/04/13/600k-concurrent-websocket-connections-on-aws-using-node-js/
+    *NOTE: in daemon.json memlock soft:hard values should be in binary bytes representation e.g. 15872000000 B instead of 15500000 KB - https://www.gbmb.org/kilobytes
 
-## Env create (Docker)
+    ```json
+    "default-ulimits": {
+        "memlock": {
+            "Hard": 15872000000,
+            "Name": "memlock",
+            "Soft": 15872000000
+        }
+    }
+    ```
 
-- Install docker
+    *NOTE in /etc/security/limits.d/custom.conf memlock soft:hard values should be in decimal kilobytes representation e.g. 15500000 KB
 
-- Clone the source
+    ```bash
+    root soft memlock 500000
+    root hard memlock 500000
+    * soft memlock 15500000
+    * hard memlock 15500000
+    ```
 
-```bash
-git clone https://github.com/grandeto/vrchats.git .
-```
-
-- Create an `.env` file following the `.env_example`
+- Create an `.env` file from `.env_example`
 
 ```bash
 chmod 600 .env
 ```
 
-- Add `pubkey.pem`, `privkey.pem`, `ca.pem` into `./certs`
+- Add `pubkey.pem`, `privkey.pem`, `ca.pem` in `./certs`
 
 ```bash
 chmod 600 ./certs/*.pem
 ```
 
-- Whitelist `.env` defined ports in your firewall
+- Whitelist `.env` ports in firewall
+
+## Docker
 
 ### Prod
 
 - Build an image
 
 ```bash
-docker build --build-arg VRCHATS_USER=$USER --build-arg NODE_VERSION=18.15.0 --build-arg NPM_VERSION=9.5.0 -t "vrchats" .
+docker build --build-arg VRCHATS_USER=$USER -t "vrchats" .
 ```
 
-- Run the image in container (set or remove --cpus, --memory and ports depending on your configuration)
+- Run the image in container
 
 ```bash
 docker run -d --name vrchats --restart always -p 8443:8443 -p 2053:2053 vrchats
 ```
 
-- Attach to the container, check `ulimits` and tune whatever needed
+- applying changes
 
-```bash
-docker exec -it vrchats /bin/bash
-
-ulimit -Sa && echo -e "\n" && ulimit -Ha
-```
-
-- applying changes 
     - re-run build step followed by:
 
     ```bash
@@ -123,7 +128,7 @@ npm run dev.remove
 npm run dev.update
 ```
 
-## Env create (pm2)
+## pm2
 
 - Save pm2 settings
 
@@ -233,10 +238,6 @@ https://example.com:8443 - should return 404 "Cannot GET /"
 - [stackoverflow 43786412](https://stackoverflow.com/questions/43786412/get-message-spawning-pm2-daemon-with-pm2-home-home-dir-pm2-always/69510630#69510630)
 
 - If your home directory is encrypted in order to demonize with `pm2 startup` all the node.js, npm and app raleted files should be outside of the home dir or try [link1](https://bbs.archlinux.org/viewtopic.php?id=201781) [link2](https://superuser.com/questions/1037466/how-to-start-a-systemd-service-after-user-login-and-stop-it-before-user-logout) [link3](https://bbs.archlinux.org/viewtopic.php?id=244264)
-
-# Cluster mode
-
-- TODO k8s managed chat cluster with shared, sticky sessions free, instance-subscribers registry
 
 # Client
 
