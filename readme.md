@@ -4,9 +4,7 @@ HTTP/WebSocket real-time message processor based on Socket.io
 
 # Requirements
 
-- Node.js v18.15.0
-- npm 9.5.0
-
+- Node.js version: refer to package.json engines.node
 
 # Features
 
