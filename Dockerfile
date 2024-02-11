@@ -1,4 +1,4 @@
-FROM node:18.15.0-alpine AS builder
+FROM node:20.11.0-alpine AS builder
 
 LABEL version="0.0.1"
 LABEL description="vrchats image - Real-time chat based on Socket.io"
@@ -50,4 +50,4 @@ EXPOSE 2053
 EXPOSE 8443
 
 ENTRYPOINT ["docker-entrypoint.sh"]
-CMD [ "/var/www/vrchats/app.config.js" ]
+CMD [ "pm2-runtime /var/www/vrchats/app.config.js" ]
