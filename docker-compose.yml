@@ -6,10 +6,9 @@ services:
     build:
       context: .
       args:
-        - NODE_VERSION=18.15.0
-        - NPM_VERSION=9.5.0
+        - STAGE=local
         - NOCACHE=$${NOCACHE}
-        - VRCHATS_USER=$USER
+        - VRCHATS_USER=vrchats
       dockerfile: Dockerfile
       target: builder
       ssh:
@@ -19,6 +18,7 @@ services:
       - "2053:2053"
 
     # mounting the project so we execute the existing state from our local filesystem
+    user: "node"
     volumes:
       - ".:/var/www/vrchats"
     working_dir: /var/www/vrchats
