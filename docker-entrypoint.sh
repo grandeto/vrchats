@@ -6,4 +6,4 @@ set -a
 source .env
 set +a
 
-exec "$@"
+exec /usr/local/bin/pm2-runtime "$@"
